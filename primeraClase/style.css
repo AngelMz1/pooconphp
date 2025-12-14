@@ -309,6 +309,89 @@ select {
     margin: 0 0 10px 0;
 }
 
+/* Detalle de historia clínica */
+.historia-detalle {
+    background: #f8f9fa;
+    padding: 25px;
+    border-radius: 8px;
+    margin: 25px 0;
+    border: 2px solid #007bff;
+}
+
+.historia-row:hover {
+    background-color: #e3f2fd !important;
+    transform: translateY(-1px);
+    transition: all 0.2s;
+}
+
+/* Estilos para acordeón de historias */
+.historia-detalle-row {
+    background-color: #f8f9fa;
+}
+
+.historia-detalle-content {
+    padding: 20px;
+    border: 2px solid #007bff;
+    border-radius: 8px;
+    margin: 10px 0;
+    background: white;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.historia-detalle-content h4 {
+    color: #007bff;
+    font-size: 1.1em;
+    margin: 15px 0 10px 0;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.historia-detalle-content .doblecolumna {
+    margin: 15px 0;
+}
+
+.historia-detalle-content .columna {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    padding: 15px;
+}
+
+.historia-row {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.historia-row:hover {
+    background-color: #e3f2fd !important;
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+    padding: 8px 16px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-size: 14px;
+    transition: background 0.3s;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    color: white;
+}
+
 /* Espaciado y separación */
 .form-section {
     margin-top: 30px;
@@ -336,7 +419,91 @@ table {
     margin-top: 25px;
 }
 
+/* Elementos pequeños del formulario */
+small {
+    display: block;
+    color: #6c757d;
+    font-size: 12px;
+    margin-top: 5px;
+    font-style: italic;
+}
+
+.form-group small {
+    margin-top: 5px;
+}
+
+/* Módulos acordeón */
+.modulo-acordeon {
+    margin: 20px 0;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    overflow: hidden;
+    background: white;
+}
+
+.modulo-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px 20px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s;
+}
+
+.modulo-header:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+}
+
+.modulo-header h2 {
+    margin: 0;
+    color: white;
+    border: none;
+    font-size: 1.2em;
+}
+
+.toggle-icon {
+    font-size: 1.2em;
+    transition: transform 0.3s;
+}
+
+.modulo-content {
+    padding: 0;
+    animation: slideDown 0.3s ease-out;
+}
+
+.modulo-content .form-section {
+    margin: 0;
+    background: white;
+    border: none;
+}
+
+.search-section {
+    padding: 20px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.search-section .search-form {
+    margin: 0;
+}
+
 /* Responsive mejorado */
+@media (max-width: 768px) {
+    .historia-detalle-content .doblecolumna {
+        grid-template-columns: 1fr;
+    }
+    
+    table {
+        font-size: 14px;
+    }
+    
+    th, td {
+        padding: 8px 10px;
+    }
+}
+
 @media (max-width: 480px) {
     .container {
         margin: 10px;
@@ -352,6 +519,10 @@ table {
     }
     
     .form-section {
+        padding: 15px;
+    }
+    
+    .historia-detalle-content {
         padding: 15px;
     }
 }
