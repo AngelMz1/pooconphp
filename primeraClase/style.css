@@ -1,0 +1,17 @@
+.encabezado{
+    background: rgb(87, 87, 255);
+    position: absolute;
+    top: 0px;
+    height: 50px;
+    width: 100%;
+    left: 0px;
+}
+.container{
+    margin-top: 50px;
+}
+.doblecolumna{
+    display: flex;
+}
+#columnas{
+    margin-left: 10%;
+}
