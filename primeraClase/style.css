@@ -259,11 +259,23 @@ textarea {
 
 input[type="text"]:focus, 
 input[type="number"]:focus, 
+input[type="date"]:focus,
 select:focus,
 textarea:focus {
     outline: none;
     border-color: #667eea;
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+input[type="date"] {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 16px;
+    font-family: inherit;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    background: white;
 }
 
 textarea {
@@ -430,6 +442,41 @@ small {
 
 .form-group small {
     margin-top: 5px;
+}
+
+/* Campos condicionales de paciente */
+#datos-paciente {
+    background: #fff3cd;
+    border: 2px solid #ffc107;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 15px 0;
+    animation: slideDown 0.3s ease-out;
+}
+
+#datos-paciente::before {
+    content: "ℹ️ Paciente nuevo - Complete los siguientes datos:";
+    display: block;
+    font-weight: bold;
+    color: #856404;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ffc107;
+}
+
+#datos-paciente .form-group label {
+    color: #856404;
+}
+
+#datos-paciente input[required],
+#datos-paciente select[required] {
+    border-color: #ffc107;
+}
+
+#datos-paciente input[required]:focus,
+#datos-paciente select[required]:focus {
+    border-color: #e0a800;
+    box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.2);
 }
 
 /* Módulos acordeón */

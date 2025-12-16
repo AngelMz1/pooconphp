@@ -26,11 +26,41 @@ function calcularEdad($fecha_nacimiento) {
 $supabase = null;
 $error_conexion = null;
 $medicos_lista = [];
+$eps_lista = [];
+$regimen_lista = [];
+$sexo_lista = [];
+$gs_rh_lista = [];
+$ciudades_lista = [];
+$barrios_lista = [];
 
 try {
     $supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
-    // Obtener lista de médicos
+    // Obtener listas de referencia
     $medicos_lista = $supabase->select('medicos', 'id,primer_nombre,primer_apellido', '');
+    $eps_lista = $supabase->select('eps', 'id,nombre_eps', '');
+    $regimen_lista = $supabase->select('regimen', 'id,regimen', '');
+    $sexo_lista = $supabase->select('sexo', 'id,sexo', '');
+    
+    // Obtener gs_rh con manejo de errores
+    try {
+        $gs_rh_lista = $supabase->select('gs_rh', '*', '');
+    } catch (Exception $e) {
+        $gs_rh_lista = [];
+    }
+    
+    // Obtener ciudades con manejo de errores
+    try {
+        $ciudades_lista = $supabase->select('ciudades', '*', '');
+    } catch (Exception $e) {
+        $ciudades_lista = [];
+    }
+    
+    // Obtener barrios con manejo de errores
+    try {
+        $barrios_lista = $supabase->select('barrios', '*', '');
+    } catch (Exception $e) {
+        $barrios_lista = [];
+    }
 } catch (Exception $e) {
     $error_conexion = "Error de conexión a Supabase: " . $e->getMessage();
 }
@@ -104,9 +134,40 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' &
             $paciente_data = $supabase->select('pacientes', 'id_paciente', "documento_id=eq.{$_POST['documento_id']}");
             
             if (empty($paciente_data)) {
-                $mensaje_creacion = "❌ No se encontró paciente con documento: {$_POST['documento_id']}";
+                // Validar campos requeridos para nuevo paciente
+                if (empty($_POST['primer_nombre']) || empty($_POST['primer_apellido']) || 
+                    empty($_POST['fecha_nacimiento']) || empty($_POST['sexo_id']) || 
+                    empty($_POST['eps_id']) || empty($_POST['regimen_id'])) {
+                    throw new Exception("Faltan datos requeridos del paciente. Complete: Primer Nombre, Primer Apellido, Fecha de Nacimiento, Sexo, EPS y Régimen.");
+                }
+                
+                // Crear nuevo paciente si no existe
+                $nuevo_paciente_data = [
+                    'documento_id' => $_POST['documento_id'],
+                    'primer_nombre' => $_POST['primer_nombre'],
+                    'segundo_nombre' => $_POST['segundo_nombre'] ?? '',
+                    'primer_apellido' => $_POST['primer_apellido'],
+                    'segundo_apellido' => $_POST['segundo_apellido'] ?? '',
+                    'fecha_nacimiento' => $_POST['fecha_nacimiento'],
+                    'sexo_id' => (int)$_POST['sexo_id'],
+                    'telefono' => $_POST['telefono'] ?? '',
+                    'direccion' => $_POST['direccion'] ?? '',
+                    'eps_id' => (int)$_POST['eps_id'],
+                    'regimen_id' => (int)$_POST['regimen_id'],
+                    'ciudad_id' => !empty($_POST['ciudad_id']) ? (int)$_POST['ciudad_id'] : null,
+                    'barrio_id' => !empty($_POST['barrio_id']) ? (int)$_POST['barrio_id'] : null,
+                    'gs_rh_id' => !empty($_POST['gs_rh_id']) ? (int)$_POST['gs_rh_id'] : null,
+                    'lugar_nacimiento' => !empty($_POST['lugar_nacimiento']) ? (int)$_POST['lugar_nacimiento'] : null,
+                    'estrato' => !empty($_POST['estrato']) ? (int)$_POST['estrato'] : null
+                ];
+                
+                $nuevo_paciente = $supabase->insert('pacientes', $nuevo_paciente_data);
+                $id_paciente = $nuevo_paciente[0]['id_paciente'];
+                $mensaje_creacion .= "✅ Paciente creado. ";
             } else {
                 $id_paciente = $paciente_data[0]['id_paciente'];
+                $mensaje_creacion .= "✅ Paciente existente encontrado. ";
+            }
                 
                 // 1. Crear historia clínica
                 $historia_data = [
@@ -155,12 +216,11 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' &
                     $supabase->insert('diagnosticos', $diagnostico_data);
                 }
                 
-                $mensaje_creacion = "✅ Historia clínica creada exitosamente. ID: $id_historia";
-                
-                // Recargar datos para mostrar la nueva historia
-                header("Location: index.php?doc_id={$_POST['documento_id']}&success=1");
-                exit;
-            }
+            $mensaje_creacion .= "✅ Historia clínica creada exitosamente. ID: $id_historia";
+            
+            // Recargar datos para mostrar la nueva historia
+            header("Location: index.php?doc_id={$_POST['documento_id']}&success=1");
+            exit;
         }
     } catch (Exception $e) {
         $mensaje_creacion = "❌ Error al crear historia clínica: " . $e->getMessage();
@@ -195,7 +255,7 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' &
                     <div class="search-section">
                         <form action="index.php" method="GET" class="search-form">
                             <input type="text" name="doc_id" placeholder="Ingrese Documento ID del Paciente (ej: 1000000246)" required 
-                                   value="<?php echo htmlspecialchars($doc_id_buscado ?? ''); ?>">
+                                   value="<?php echo isset($_GET['doc_id']) ? htmlspecialchars($_GET['doc_id']) : ''; ?>">
                             <button type="submit">🔍 Buscar Historia</button>
                         </form>
                     </div>
@@ -344,24 +404,182 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' &
                 <form action="index.php" method="POST">
                     <input type="hidden" name="action" value="crear_historia">
                     
-                    <div class="doblecolumna">
-                        <div class="form-group">
-                            <label for="documento_id">🆔 Número de Documento (*):</label>
-                            <input type="text" id="documento_id" name="documento_id" placeholder="Ej: 1000000246" required 
-                                   value="<?php echo $paciente_encontrado ? $paciente_encontrado['documento_id'] : ''; ?>">
-                            <small>Número de documento del paciente</small>
+                    <h3>👥 Datos del Paciente</h3>
+                    
+                    <div class="form-group">
+                        <label for="documento_id">🆔 Número de Documento (*):</label>
+                        <input type="text" id="documento_id" name="documento_id" placeholder="Ej: 1000000246" required 
+                               value="" onblur="verificarPaciente()">
+                        <small>Ingrese el documento para verificar si el paciente existe</small>
+                    </div>
+                    
+                    <div id="datos-paciente" style="display: none;">
+                        <div class="doblecolumna">
+                            <div class="form-group">
+                                <label for="primer_nombre">👤 Primer Nombre (*):</label>
+                                <input type="text" id="primer_nombre" name="primer_nombre" placeholder="Ej: Juan" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="segundo_nombre">👤 Segundo Nombre:</label>
+                                <input type="text" id="segundo_nombre" name="segundo_nombre" placeholder="Ej: Carlos">
+                            </div>
                         </div>
+                        
+                        <div class="doblecolumna">
+                            <div class="form-group">
+                                <label for="primer_apellido">👤 Primer Apellido (*):</label>
+                                <input type="text" id="primer_apellido" name="primer_apellido" placeholder="Ej: Pérez" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="segundo_apellido">👤 Segundo Apellido:</label>
+                                <input type="text" id="segundo_apellido" name="segundo_apellido" placeholder="Ej: González">
+                            </div>
+                        </div>
+                        
+                        <div class="doblecolumna">
+                            <div class="form-group">
+                                <label for="fecha_nacimiento">🎂 Fecha de Nacimiento (*):</label>
+                                <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="sexo_id">⚥ Sexo (*):</label>
+                                <select id="sexo_id" name="sexo_id" required>
+                                    <option value="">Seleccione sexo</option>
+                                    <?php foreach ($sexo_lista as $sexo): ?>
+                                        <option value="<?php echo $sexo['id']; ?>">
+                                            <?php echo htmlspecialchars($sexo['sexo']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="doblecolumna">
+                            <div class="form-group">
+                                <label for="telefono">📞 Teléfono:</label>
+                                <input type="text" id="telefono" name="telefono" placeholder="Ej: 3001234567">
+                            </div>
+                            <div class="form-group">
+                                <label for="direccion">📍 Dirección:</label>
+                                <input type="text" id="direccion" name="direccion" placeholder="Ej: Calle 123 #45-67">
+                            </div>
+                        </div>
+                        
+                        <div class="doblecolumna">
+                            <div class="form-group">
+                                <label for="ciudad_id">🏙️ Ciudad:</label>
+                                <select id="ciudad_id" name="ciudad_id">
+                                    <option value="">Seleccione ciudad</option>
+                                    <?php foreach ($ciudades_lista as $ciudad): ?>
+                                        <option value="<?php echo $ciudad['id']; ?>">
+                                            <?php 
+                                                $keys = array_keys($ciudad);
+                                                $nombre_col = $keys[1] ?? 'nombre';
+                                                echo htmlspecialchars($ciudad[$nombre_col] ?? 'N/A'); 
+                                            ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="barrio_id">🏘️ Barrio:</label>
+                                <select id="barrio_id" name="barrio_id">
+                                    <option value="">Seleccione barrio</option>
+                                    <?php foreach ($barrios_lista as $barrio): ?>
+                                        <option value="<?php echo $barrio['id']; ?>">
+                                            <?php 
+                                                $keys = array_keys($barrio);
+                                                $nombre_col = $keys[1] ?? 'nombre';
+                                                echo htmlspecialchars($barrio[$nombre_col] ?? 'N/A'); 
+                                            ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="doblecolumna">
+                            <div class="form-group">
+                                <label for="eps_id">🏥 EPS (*):</label>
+                                <select id="eps_id" name="eps_id" required>
+                                    <option value="">Seleccione EPS</option>
+                                    <?php foreach ($eps_lista as $eps): ?>
+                                        <option value="<?php echo $eps['id']; ?>">
+                                            <?php echo htmlspecialchars($eps['nombre_eps']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="regimen_id">⚕️ Régimen (*):</label>
+                                <select id="regimen_id" name="regimen_id" required>
+                                    <option value="">Seleccione régimen</option>
+                                    <?php foreach ($regimen_lista as $regimen): ?>
+                                        <option value="<?php echo $regimen['id']; ?>">
+                                            <?php echo htmlspecialchars($regimen['regimen']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="doblecolumna">
+                            <div class="form-group">
+                                <label for="gs_rh_id">🩸 Grupo Sanguíneo:</label>
+                                <select id="gs_rh_id" name="gs_rh_id">
+                                    <option value="">Seleccione grupo sanguíneo</option>
+                                    <?php foreach ($gs_rh_lista as $gs_rh): ?>
+                                        <option value="<?php echo $gs_rh['id']; ?>">
+                                            <?php 
+                                                $keys = array_keys($gs_rh);
+                                                $nombre_col = $keys[1] ?? 'tipo';
+                                                echo htmlspecialchars($gs_rh[$nombre_col] ?? 'N/A'); 
+                                            ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="estrato">📊 Estrato:</label>
+                                <select id="estrato" name="estrato">
+                                    <option value="">Seleccione estrato</option>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                    <option value="6">6</option>
+                                </select>
+                            </div>
+                        </div>
+                        
                         <div class="form-group">
-                            <label for="medico_id">👨⚕️ Médico (*):</label>
-                            <select id="medico_id" name="medico_id" required>
-                                <option value="">Seleccione un médico</option>
-                                <?php foreach ($medicos_lista as $medico): ?>
-                                    <option value="<?php echo $medico['id']; ?>">
-                                        <?php echo htmlspecialchars($medico['primer_nombre'] . ' ' . $medico['primer_apellido']); ?>
+                            <label for="lugar_nacimiento">🏠 Lugar de Nacimiento:</label>
+                            <select id="lugar_nacimiento" name="lugar_nacimiento">
+                                <option value="">Seleccione lugar de nacimiento</option>
+                                <?php foreach ($ciudades_lista as $ciudad): ?>
+                                    <option value="<?php echo $ciudad['id']; ?>">
+                                        <?php 
+                                            $keys = array_keys($ciudad);
+                                            $nombre_col = $keys[1] ?? 'nombre';
+                                            echo htmlspecialchars($ciudad[$nombre_col] ?? 'N/A'); 
+                                        ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="medico_id">👨⚕️ Médico (*):</label>
+                        <select id="medico_id" name="medico_id" required>
+                            <option value="">Seleccione un médico</option>
+                            <?php foreach ($medicos_lista as $medico): ?>
+                                <option value="<?php echo $medico['id']; ?>">
+                                    <?php echo htmlspecialchars($medico['primer_nombre'] . ' ' . $medico['primer_apellido']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                     
                     <h3>📝 Datos de la Consulta</h3>
@@ -433,6 +651,7 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' &
                     </div>
                     
                         <button type="submit" class="btn-primary">💾 Crear Historia Clínica Completa</button>
+                        <small style="color: #666; display: block; margin-top: 10px;">(*) Campos requeridos. Los datos del paciente solo se solicitan si es nuevo.</small>
                     </form>
                     </div>
                 </div>
@@ -440,6 +659,27 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' &
         </div>
     </div>
     <script>
+    // Limpiar campos al cargar la página
+    window.addEventListener('load', function() {
+        // Limpiar campo de búsqueda si no hay parámetros GET
+        if (!window.location.search) {
+            const searchInput = document.querySelector('input[name="doc_id"]');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            
+            // Limpiar todos los campos del formulario de creación
+            const formInputs = document.querySelectorAll('#modulo-creacion input, #modulo-creacion textarea, #modulo-creacion select');
+            formInputs.forEach(input => {
+                if (input.type === 'text' || input.type === 'number' || input.tagName === 'TEXTAREA') {
+                    input.value = '';
+                } else if (input.tagName === 'SELECT') {
+                    input.selectedIndex = 0;
+                }
+            });
+        }
+    });
+    
     function toggleHistoria(index) {
         const detalle = document.getElementById('detalle-' + index);
         const isVisible = detalle.style.display !== 'none';
@@ -467,6 +707,43 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' &
             content.style.display = 'block';
             icon.textContent = '▲';
         }
+    }
+    
+    function verificarPaciente() {
+        const docId = document.getElementById('documento_id').value;
+        const datosPaciente = document.getElementById('datos-paciente');
+        
+        if (docId.trim() === '') {
+            datosPaciente.style.display = 'none';
+            return;
+        }
+        
+        // Hacer petición AJAX para verificar si el paciente existe
+        fetch('verificar_paciente.php?doc_id=' + encodeURIComponent(docId))
+            .then(response => response.json())
+            .then(data => {
+                if (data.existe) {
+                    // Paciente existe, ocultar campos
+                    datosPaciente.style.display = 'none';
+                    // Opcional: mostrar mensaje de que el paciente existe
+                    console.log('Paciente encontrado:', data.paciente);
+                } else {
+                    // Paciente no existe, mostrar campos para crearlo
+                    datosPaciente.style.display = 'block';
+                    // Hacer campos requeridos
+                    document.getElementById('primer_nombre').required = true;
+                    document.getElementById('primer_apellido').required = true;
+                    document.getElementById('fecha_nacimiento').required = true;
+                    document.getElementById('sexo_id').required = true;
+                    document.getElementById('eps_id').required = true;
+                    document.getElementById('regimen_id').required = true;
+                }
+            })
+            .catch(error => {
+                console.error('Error verificando paciente:', error);
+                // En caso de error, mostrar campos por seguridad
+                datosPaciente.style.display = 'block';
+            });
     }
     </script>
 </body>
