@@ -1,14 +1,15 @@
 <?php
-require_once 'vendor/autoload.php';
+require_once '../vendor/autoload.php';
 
 use App\SupabaseClient;
 use App\HistoriaClinica;
 use App\FormulaMedica;
 use App\PlanManejo;
 use App\Procedimiento;
+use App\ReferenceData;
 use Dotenv\Dotenv;
 
-$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
 
 $supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
@@ -16,6 +17,15 @@ $historiaModel = new HistoriaClinica($supabase);
 $formulaModel = new FormulaMedica($supabase);
 $planModel = new PlanManejo($supabase);
 $procModel = new Procedimiento($supabase);
+$refData = new ReferenceData($supabase);
+
+// Obtener lista de medicamentos
+$medicamentosList = $refData->getMedicamentos();
+$medicamentosOptions = '<option value="">Seleccione Medicamento</option>';
+foreach ($medicamentosList as $med) {
+    // Add data-nombre for JS reference if needed
+    $medicamentosOptions .= '<option value="' . htmlspecialchars($med['id']) . '">' . htmlspecialchars($med['nombre']) . '</option>';
+}
 
 $mensaje = '';
 $error = '';
@@ -32,6 +42,12 @@ try {
     $historia = $historiaModel->obtenerPorId($id_historia);
     if (!$historia) {
         throw new Exception("Historia clínica no encontrada");
+    }
+
+    // Verificar si la historia está cerrada
+    if (!empty($historia['fecha_egreso'])) {
+        header("Location: ver_historia.php?id=$id_historia&error=closed");
+        exit;
     }
 } catch (Exception $e) {
     $error = $e->getMessage();
@@ -57,10 +73,11 @@ if ($_POST) {
             // Guardar medicamentos (si hay)
             if (!empty($datos['medicamentos'])) {
                 foreach ($datos['medicamentos'] as $med) {
-                    if (!empty($med['nombre'])) {
+                    if (!empty($med['id_medicamento'])) {
                         $formulaModel->agregarMedicamento([
                             'id_formula' => $id_formula,
-                            'nombre_medicamento' => $med['nombre'],
+                            'id_historia' => $id_historia,
+                            'medicamento_id' => $med['id_medicamento'],
                             'presentacion' => $med['presentacion'],
                             'dosis' => $med['dosis'],
                             'frecuencia' => $med['frecuencia'],
@@ -105,7 +122,7 @@ if ($_POST) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Órdenes Médicas - Sistema Médico</title>
-    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="../assets/css/styles.css">
     <style>
         .tabs {
             display: flex;
@@ -304,7 +321,9 @@ if ($_POST) {
             <button type="button" class="btn-remove" onclick="this.parentElement.remove()">×</button>
             <div class="grid grid-2">
                 <div class="form-group">
-                    <input type="text" name="medicamentos[{i}][nombre]" placeholder="Nombre del Medicamento *" required>
+                    <select name="medicamentos[{i}][id_medicamento]" required style="width: 100%; padding: 0.5rem;">
+                        <?= $medicamentosOptions ?>
+                    </select>
                 </div>
                 <div class="form-group">
                     <input type="text" name="medicamentos[{i}][presentacion]" placeholder="Presentación (Ej: Tab 500mg)">

@@ -1,12 +1,12 @@
 <?php
-require_once 'vendor/autoload.php';
+require_once '../vendor/autoload.php';
 
 use App\SupabaseClient;
 use App\HistoriaClinica;
 use App\Paciente;
 use Dotenv\Dotenv;
 
-$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
 
 $supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
@@ -80,7 +80,7 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Historias Clínicas - Sistema de Gestión Médica</title>
-    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="../assets/css/styles.css">
 </head>
 <body>
     <div class="container-sm">
@@ -186,7 +186,7 @@ try {
 
             <div style="text-align: center; margin-top: 30px;">
                 <button type="submit" class="btn btn-primary btn-lg">💾 Guardar Historia Clínica</button>
-                <a href="index.php" class="btn btn-secondary btn-lg">🏠 Volver al Inicio</a>
+                <a href="../index.php" class="btn btn-secondary btn-lg">🏠 Volver al Inicio</a>
             </div>
         </form>
         </div>

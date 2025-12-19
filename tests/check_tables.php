@@ -1,10 +1,10 @@
 <?php
-require_once 'vendor/autoload.php';
+require_once '../vendor/autoload.php';
 
 use App\SupabaseClient;
 use Dotenv\Dotenv;
 
-$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
 
 echo "<h2>📊 Verificación de Tablas</h2>";
@@ -85,4 +85,4 @@ try {
     th { background-color: #f2f2f2; }
 </style>
 
-<p><a href="index.php" style="text-decoration: none; background: #007cba; color: white; padding: 10px 15px; border-radius: 3px;">🏠 Volver al Inicio</a></p>
+<p><a href="../index.php" style="text-decoration: none; background: #007cba; color: white; padding: 10px 15px; border-radius: 3px;">🏠 Volver al Inicio</a></p>

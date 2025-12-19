@@ -1,10 +1,10 @@
 <?php
-require_once 'vendor/autoload.php';
+require_once '../vendor/autoload.php';
 
 use App\SupabaseClient;
 use Dotenv\Dotenv;
 
-$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
 
 echo "<h2>🔧 Prueba de Conexión a Supabase</h2>";

@@ -1,5 +1,5 @@
 <?php
-require_once 'vendor/autoload.php';
+require_once '../vendor/autoload.php';
 
 use App\SupabaseClient;
 use App\HistoriaClinica;
@@ -9,7 +9,7 @@ use App\ExamenFisico;
 use App\RevisionSistemas;
 use Dotenv\Dotenv;
 
-$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
 
 $supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
@@ -29,6 +29,17 @@ if (!isset($_GET['id'])) {
 }
 
 $id = $_GET['id'];
+
+// Procesar cierre de historia
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'cerrar') {
+    try {
+        $historiaModel->cerrar($id);
+        header("Location: ver_historia.php?id=$id&msg=closed");
+        exit;
+    } catch (Exception $e) {
+        $error = "Error al cerrar historia: " . $e->getMessage();
+    }
+}
 
 try {
     $historia = $historiaModel->obtenerPorId($id);
@@ -54,7 +65,7 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Historia Clínica #<?= $id ?> - Sistema de Gestión Médica</title>
-    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="../assets/css/styles.css">
 </head>
 <body>
     <div class="container">
@@ -218,17 +229,42 @@ try {
             <!-- Acciones -->
             <div class="card">
                 <h3>⚡ Acciones</h3>
-                <div class="flex gap-2 flex-wrap">
-                    <a href="registrar_examen.php?id=<?= $historia['id_historia'] ?>" class="btn btn-primary">
-                        👨‍⚕️ Registrar Examen Físico
-                    </a>
-                    <a href="registrar_ordenes.php?id=<?= $historia['id_historia'] ?>" class="btn btn-success">
-                        💊 Recetar / Órdenes
-                    </a>
+                
+                <?php if ($historia['fecha_egreso']): ?>
+                    <div class="alert alert-warning mb-4">
+                        🔒 <strong>Historia Cerrada:</strong> Esta historia clínica se encuentra cerrada y en modo solo lectura. No se pueden agregar más registros.
+                    </div>
+                <?php endif; ?>
+
+                <div class="flex gap-2 flex-wrap items-center">
+                    <?php if (!$historia['fecha_egreso']): ?>
+                        <a href="registrar_examen.php?id=<?= $historia['id_historia'] ?>" class="btn btn-primary">
+                            👨‍⚕️ Registrar Examen Físico
+                        </a>
+                        <a href="registrar_ordenes.php?id=<?= $historia['id_historia'] ?>" class="btn btn-success">
+                            💊 Recetar / Órdenes
+                        </a>
+                        
+                        <!-- Formulario para cerrar historia -->
+                        <form method="POST" onsubmit="return confirm('¿Está seguro de cerrar esta historia clínica? No podrá realizar más cambios.')" style="display: inline;">
+                            <input type="hidden" name="action" value="cerrar">
+                            <button type="submit" class="btn btn-danger">
+                                🔒 Cerrar Historia
+                            </button>
+                        </form>
+                    <?php else: ?>
+                        <button class="btn btn-secondary" disabled style="opacity: 0.6; cursor: not-allowed;">
+                            👨‍⚕️ Registrar Examen Físico (Deshabilitado)
+                        </button>
+                        <button class="btn btn-secondary" disabled style="opacity: 0.6; cursor: not-allowed;">
+                            💊 Recetar / Órdenes (Deshabilitado)
+                        </button>
+                    <?php endif; ?>
+
                     <a href="listar_historias.php" class="btn btn-secondary">
                         📋 Volver a Historias
                     </a>
-                    <a href="index.php" class="btn btn-outline">
+                    <a href="../index.php" class="btn btn-outline">
                         🏠 Inicio
                     </a>
                 </div>

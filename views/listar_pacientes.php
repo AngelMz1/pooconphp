@@ -1,11 +1,11 @@
 <?php
-require_once 'vendor/autoload.php';
+require_once '../vendor/autoload.php';
 
 use App\SupabaseClient;
 use App\Paciente;
 use Dotenv\Dotenv;
 
-$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
 
 $supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
@@ -36,7 +36,7 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lista de Pacientes - Sistema de Gestión Médica</title>
-    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="../assets/css/styles.css">
 </head>
 <body>
     <div class="container">
@@ -56,7 +56,7 @@ try {
                 <div class="flex gap-2 flex-wrap">
                     <a href="gestionar_pacientes.php" class="btn btn-success">➕ Nuevo Paciente</a>
                     <button onclick="exportarPacientes()" class="btn btn-export">📥 Exportar CSV</button>
-                    <a href="index.php" class="btn btn-outline">🏠 Inicio</a>
+                    <a href="../index.php" class="btn btn-outline">🏠 Inicio</a>
                 </div>
             </div>
         </div>
@@ -168,7 +168,7 @@ try {
         </div>
     </div>
 
-    <script src="assets/js/app.js"></script>
+    <script src="../assets/js/app.js"></script>
     <script>
         // Datos de pacientes
         const pacientesData = <?= json_encode($pacientes) ?>;

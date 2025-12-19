@@ -219,7 +219,7 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' &
             $mensaje_creacion .= "✅ Historia clínica creada exitosamente. ID: $id_historia";
             
             // Recargar datos para mostrar la nueva historia
-            header("Location: index.php?doc_id={$_POST['documento_id']}&success=1");
+            header("Location: legacy_v1.php?doc_id={$_POST['documento_id']}&success=1");
             exit;
         }
     } catch (Exception $e) {
@@ -234,7 +234,7 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' &
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Historia Clínica</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../assets/css/legacy.css">
 </head>
 <body>
     <div class="container">
@@ -253,7 +253,7 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' &
                 </div>
                 <div class="modulo-content" id="modulo-consulta">
                     <div class="search-section">
-                        <form action="index.php" method="GET" class="search-form">
+                        <form action="legacy_v1.php" method="GET" class="search-form">
                             <input type="text" name="doc_id" placeholder="Ingrese Documento ID del Paciente (ej: 1000000246)" required 
                                    value="<?php echo isset($_GET['doc_id']) ? htmlspecialchars($_GET['doc_id']) : ''; ?>">
                             <button type="submit">🔍 Buscar Historia</button>
@@ -401,7 +401,7 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' &
                     <div class="<?php echo strpos($mensaje_creacion, '❌') !== false ? 'error' : 'success'; ?>"><?php echo $mensaje_creacion; ?></div>
                 <?php endif; ?>
                 
-                <form action="index.php" method="POST">
+                <form action="legacy_v1.php" method="POST">
                     <input type="hidden" name="action" value="crear_historia">
                     
                     <h3>👥 Datos del Paciente</h3>
@@ -719,7 +719,7 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' &
         }
         
         // Hacer petición AJAX para verificar si el paciente existe
-        fetch('verificar_paciente.php?doc_id=' + encodeURIComponent(docId))
+        fetch('../api/verificar_paciente.php?doc_id=' + encodeURIComponent(docId))
             .then(response => response.json())
             .then(data => {
                 if (data.existe) {

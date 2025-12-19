@@ -1,11 +1,11 @@
 <?php
-require_once 'vendor/autoload.php';
+require_once '../vendor/autoload.php';
 
 use App\SupabaseClient;
 use App\HistoriaClinica;
 use Dotenv\Dotenv;
 
-$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
 
 $supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
@@ -27,7 +27,7 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Historias Clínicas - Sistema de Gestión Médica</title>
-    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="../assets/css/styles.css">
 </head>
 <body>
     <div class="container">
@@ -47,7 +47,7 @@ try {
                 <div class="flex gap-2 flex-wrap">
                     <a href="historias_clinicas.php" class="btn btn-success">➕ Nueva Historia</a>
                     <button onclick="exportarHistorias()" class="btn btn-export">📥 Exportar CSV</button>
-                    <a href="index.php" class="btn btn-outline">🏠 Inicio</a>
+                    <a href="../index.php" class="btn btn-outline">🏠 Inicio</a>
                 </div>
             </div>
         </div>
@@ -188,7 +188,7 @@ try {
         </div>
     </div>
 
-    <script src="assets/js/app.js"></script>
+    <script src="../assets/js/app.js"></script>
     <script>
         // Datos de historias
         const historiasData = <?= json_encode($historias) ?>;

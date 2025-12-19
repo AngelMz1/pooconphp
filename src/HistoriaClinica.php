@@ -200,6 +200,21 @@ class HistoriaClinica
     }
 
     /**
+     * Cerrar historia clínica (establecer fecha de egreso)
+     */
+    public function cerrar($idHistoria)
+    {
+        try {
+            $datos = [
+                'fecha_egreso' => date('Y-m-d H:i:s')
+            ];
+            return $this->supabase->update('historias_clinicas', $datos, "id_historia=eq.$idHistoria");
+        } catch (\Exception $e) {
+            throw new \Exception("Error al cerrar historia: " . $e->getMessage());
+        }
+    }
+
+    /**
      * Eliminar historia clínica
      */
     public function eliminar($idHistoria)

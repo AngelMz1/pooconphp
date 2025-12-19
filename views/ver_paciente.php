@@ -1,12 +1,12 @@
 <?php
-require_once 'vendor/autoload.php';
+require_once '../vendor/autoload.php';
 
 use App\SupabaseClient;
 use App\Paciente;
 use App\HistoriaClinica;
 use Dotenv\Dotenv;
 
-$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
 
 $supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
@@ -44,7 +44,7 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detalles del Paciente - Sistema de Gestión Médica</title>
-    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="../assets/css/styles.css">
 </head>
 <body>
     <div class="container">
@@ -245,7 +245,7 @@ try {
                     <a href="listar_pacientes.php" class="btn btn-secondary">
                         ← Volver a la lista
                     </a>
-                    <a href="index.php" class="btn btn-outline">
+                    <a href="../index.php" class="btn btn-outline">
                         🏠 Inicio
                     </a>
                 </div>

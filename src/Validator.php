@@ -172,9 +172,8 @@ class Validator
         $this->clearErrors();
         
         $this->required($datos['id_paciente'] ?? '', 'id_paciente');
-        $this->required($datos['motivo_consulta'] ?? '', 'motivo_consulta');
-        $this->minLength($datos['motivo_consulta'] ?? '', 10, 'motivo_consulta');
-        
+    // $this->required($datos['motivo_consulta'] ?? '', 'motivo_consulta'); // Moved to Consultas
+    
         return !$this->hasErrors();
     }
 }

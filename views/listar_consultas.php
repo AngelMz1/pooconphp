@@ -1,11 +1,11 @@
 <?php
-require_once 'vendor/autoload.php';
+require_once '../vendor/autoload.php';
 
 use App\SupabaseClient;
 use App\Consulta;
 use Dotenv\Dotenv;
 
-$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
 
 $supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
@@ -27,7 +27,7 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consultas Médicas - Sistema Médico</title>
-    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="../assets/css/styles.css">
 </head>
 <body>
     <div class="container">
@@ -46,7 +46,7 @@ try {
                 <h2 style="margin: 0;">📋 Consultas (<span id="total-count"><?= count($consultas) ?></span>)</h2>
                 <div class="flex gap-2 flex-wrap">
                     <a href="nueva_consulta.php" class="btn btn-success">🩺 Nueva Consulta</a>
-                    <a href="index.php" class="btn btn-outline">🏠 Inicio</a>
+                    <a href="../index.php" class="btn btn-outline">🏠 Inicio</a>
                 </div>
             </div>
         </div>

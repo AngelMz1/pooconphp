@@ -236,6 +236,21 @@ class ReferenceData
     }
 
     /**
+     * Obtener medicamentos (Catálogo)
+     */
+    public function getMedicamentos()
+    {
+        if (!isset($this->cache['medicamentos'])) {
+            try {
+                $this->cache['medicamentos'] = $this->supabase->select('medicamentos', '*', '', 'nombre.asc');
+            } catch (\Exception $e) {
+                $this->cache['medicamentos'] = [];
+            }
+        }
+        return $this->cache['medicamentos'];
+    }
+
+    /**
      * Limpiar cache
      */
     public function clearCache()

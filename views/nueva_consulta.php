@@ -1,5 +1,5 @@
 <?php
-require_once 'vendor/autoload.php';
+require_once '../vendor/autoload.php';
 
 use App\SupabaseClient;
 use App\Consulta;
@@ -8,7 +8,7 @@ use App\Paciente;
 use App\Diagnostico;
 use Dotenv\Dotenv;
 
-$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
 
 $supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
@@ -71,7 +71,7 @@ if ($_POST) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nueva Consulta Médica - Sistema Médico</title>
-    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="../assets/css/styles.css">
 </head>
 <body>
     <div class="container-sm">
@@ -199,7 +199,7 @@ if ($_POST) {
                     <button type="submit" class="btn btn-success btn-lg">
                         💾 Registrar Consulta
                     </button>
-                    <a href="index.php" class="btn btn-secondary btn-lg">
+                    <a href="../index.php" class="btn btn-secondary btn-lg">
                         Cancelar
                     </a>
                 </div>
@@ -273,7 +273,7 @@ if ($_POST) {
             // Debounce para no saturar
             clearTimeout(timeoutBusqueda);
             timeoutBusqueda = setTimeout(() => {
-                fetch(`api_cie10.php?q=${encodeURIComponent(termino)}`)
+                fetch(`../api/api_cie10.php?q=${encodeURIComponent(termino)}`)
                     .then(response => response.json())
                     .then(data => {
                         lista.innerHTML = '';

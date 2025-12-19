@@ -1,11 +1,11 @@
 <?php
-require_once 'vendor/autoload.php';
+require_once '../vendor/autoload.php';
 
 use App\SupabaseClient;
 use App\Diagnostico;
 use Dotenv\Dotenv;
 
-$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
 
 $supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
@@ -31,7 +31,7 @@ if (isset($_GET['buscar']) && !empty($_GET['buscar'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Buscador CIE-10 - Sistema Médico</title>
-    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="../assets/css/styles.css">
     <style>
         .search-container {
             max-width: 800px;
@@ -140,7 +140,7 @@ if (isset($_GET['buscar']) && !empty($_GET['buscar'])) {
             <?php endif; ?>
 
             <div style="text-align: center; margin-top: 2rem;">
-                <a href="index.php" class="btn btn-outline">🏠 Volver al Inicio</a>
+                <a href="../index.php" class="btn btn-outline">🏠 Volver al Inicio</a>
             </div>
         </div>
     </div>

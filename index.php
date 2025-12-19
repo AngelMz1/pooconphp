@@ -77,42 +77,42 @@
             
             <h4 style="color: var(--gray-600); margin-top: 1.5rem;">👥 Pacientes</h4>
             <div class="grid grid-2">
-                <a href="gestionar_pacientes.php" class="btn btn-success">
+                <a href="views/gestionar_pacientes.php" class="btn btn-success">
                     ➕ Nuevo Paciente (Básico)
                 </a>
-                <a href="gestionar_pacientes_completo.php" class="btn btn-primary">
+                <a href="views/gestionar_pacientes_completo.php" class="btn btn-primary">
                     ➕ Nuevo Paciente (Completo)
                 </a>
-                <a href="listar_pacientes.php" class="btn btn-primary">
+                <a href="views/listar_pacientes.php" class="btn btn-primary">
                     👥 Gestionar Pacientes
                 </a>
             </div>
 
             <h4 style="color: var(--gray-600); margin-top: 1.5rem;">🩺 Consultas Médicas</h4>
             <div class="grid grid-2">
-                <a href="nueva_consulta.php" class="btn btn-success">
+                <a href="views/nueva_consulta.php" class="btn btn-success">
                     🩺 Nueva Consulta
                 </a>
-                <a href="listar_consultas.php" class="btn btn-primary">
+                <a href="views/listar_consultas.php" class="btn btn-primary">
                     📋 Ver Consultas
                 </a>
-                <a href="buscar_cie10.php" class="btn btn-primary">
+                <a href="views/buscar_cie10.php" class="btn btn-primary">
                     🔍 Buscar CIE-10
                 </a>
             </div>
 
             <h4 style="color: var(--gray-600); margin-top: 1.5rem;">📋 Historias Clínicas</h4>
             <div class="grid grid-2">
-                <a href="historias_clinicas.php" class="btn btn-success">
+                <a href="views/historias_clinicas.php" class="btn btn-success">
                     📋 Nueva Historia Clínica
                 </a>
-                <a href="listar_historias.php" class="btn btn-primary">
+                <a href="views/listar_historias.php" class="btn btn-primary">
                     📚 Ver Historias Clínicas
                 </a>
             </div>
             
             <div style="margin-top: 1rem;">
-                <a href="test_conexion.php" class="btn btn-outline" style="width: 100%;">
+                <a href="tests/test_conexion.php" class="btn btn-outline" style="width: 100%;">
                     🔧 Probar Conexión
                 </a>
             </div>
