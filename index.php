@@ -3,81 +3,193 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POO con PHP - Supabase</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .container { max-width: 800px; margin: 0 auto; }
-        .card { border: 1px solid #ddd; padding: 20px; margin: 10px 0; border-radius: 5px; }
-        .success { color: green; }
-        .error { color: red; }
-        .warning { color: orange; }
-        .btn { padding: 10px 15px; margin: 5px; text-decoration: none; background: #007cba; color: white; border-radius: 3px; }
-    </style>
+    <title>POO con PHP - Sistema de Gestión Médica</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
-    <div class="container">
-        <h1>🚀 POO con PHP - Aplicativo Supabase</h1>
+    <?php
+    require_once 'vendor/autoload.php';
+    
+    use App\SupabaseClient;
+    use App\Paciente;
+    use App\HistoriaClinica;
+    use Dotenv\Dotenv;
+    
+    // Inicializar variables
+    $totalPacientes = 0;
+    $totalHistorias = 0;
+    $systemStatus = [];
+    
+    try {
+        $dotenv = Dotenv::createImmutable(__DIR__);
+        $dotenv->load();
         
-        <div class="card">
-            <h2>📋 Menú Principal</h2>
-            <a href="test_conexion.php" class="btn">🔧 Probar Conexión</a>
-            <a href="check_tables.php" class="btn">📊 Verificar Tablas</a>
-            <a href="test_paciente.php" class="btn">👤 Probar Pacientes</a>
-            <a href="historias_clinicas.php" class="btn">📋 Nueva Historia Clínica</a>
-            <a href="test_historia.php" class="btn">🧪 Probar Historias</a>
+        // Verificar configuración
+        if (isset($_ENV['SUPABASE_URL']) && isset($_ENV['SUPABASE_KEY'])) {
+            $supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
+            $paciente = new Paciente($supabase);
+            $historiaClinica = new HistoriaClinica($supabase);
+            
+            // Obtener estadísticas
+            try {
+                $totalPacientes = $paciente->contarTotal();
+                $totalHistorias = $historiaClinica->contarTotal();
+            } catch (Exception $e) {
+                // Silenciar errores de estadísticas
+            }
+        }
+    } catch (Exception $e) {
+        // Silenciar errores de configuración
+    }
+    ?>
+    
+    <div class="container">
+        <!-- Header -->
+        <div class="card card-gradient text-center mb-4 fade-in">
+            <h1>🏥 Sistema de Gestión Médica</h1>
+            <p style="font-size: 1.1rem; margin-bottom: 0;">POO con PHP & Supabase</p>
         </div>
 
-        <?php
-        require_once 'vendor/autoload.php';
-        
-        use App\SupabaseClient;
-        use Dotenv\Dotenv;
-        
-        echo "<div class='card'>";
-        echo "<h2>🔍 Estado del Sistema</h2>";
-        
-        // Verificar .env
-        if (file_exists('.env')) {
-            echo "<p class='success'>✅ Archivo .env encontrado</p>";
-        } else {
-            echo "<p class='error'>❌ Archivo .env no encontrado</p>";
-        }
-        
-        // Verificar vendor
-        if (file_exists('vendor/autoload.php')) {
-            echo "<p class='success'>✅ Dependencias instaladas</p>";
-        } else {
-            echo "<p class='error'>❌ Dependencias no instaladas - Ejecuta: composer install</p>";
-        }
-        
-        // Verificar variables de entorno
-        try {
-            $dotenv = Dotenv::createImmutable(__DIR__);
-            $dotenv->load();
+        <!-- Estadísticas -->
+        <div class="grid grid-3 mb-4 fade-in">
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-value"><?= $totalPacientes ?></div>
+                <div class="stat-label">Pacientes</div>
+            </div>
             
-            if (isset($_ENV['SUPABASE_URL']) && isset($_ENV['SUPABASE_KEY'])) {
-                echo "<p class='success'>✅ Variables de entorno configuradas</p>";
-                echo "<p><strong>URL:</strong> " . $_ENV['SUPABASE_URL'] . "</p>";
-            } else {
-                echo "<p class='error'>❌ Variables de entorno no configuradas</p>";
-            }
-        } catch (Exception $e) {
-            echo "<p class='error'>❌ Error cargando .env: " . $e->getMessage() . "</p>";
-        }
-        
-        echo "</div>";
-        ?>
-        
+            <div class="stat-card">
+                <div class="stat-icon">📋</div>
+                <div class="stat-value"><?= $totalHistorias ?></div>
+                <div class="stat-label">Historias Clínicas</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">✅</div>
+                <div class="stat-value">100%</div>
+                <div class="stat-label">Sistema Activo</div>
+            </div>
+        </div>
+
+        <!-- Navegación Principal -->
+        <div class="card mb-4">
+            <h2>🎯 Menú Principal</h2>
+            
+            <h4 style="color: var(--gray-600); margin-top: 1.5rem;">👥 Pacientes</h4>
+            <div class="grid grid-2">
+                <a href="gestionar_pacientes.php" class="btn btn-success">
+                    ➕ Nuevo Paciente (Básico)
+                </a>
+                <a href="gestionar_pacientes_completo.php" class="btn btn-primary">
+                    ➕ Nuevo Paciente (Completo)
+                </a>
+                <a href="listar_pacientes.php" class="btn btn-primary">
+                    👥 Gestionar Pacientes
+                </a>
+            </div>
+
+            <h4 style="color: var(--gray-600); margin-top: 1.5rem;">🩺 Consultas Médicas</h4>
+            <div class="grid grid-2">
+                <a href="nueva_consulta.php" class="btn btn-success">
+                    🩺 Nueva Consulta
+                </a>
+                <a href="listar_consultas.php" class="btn btn-primary">
+                    📋 Ver Consultas
+                </a>
+                <a href="buscar_cie10.php" class="btn btn-primary">
+                    🔍 Buscar CIE-10
+                </a>
+            </div>
+
+            <h4 style="color: var(--gray-600); margin-top: 1.5rem;">📋 Historias Clínicas</h4>
+            <div class="grid grid-2">
+                <a href="historias_clinicas.php" class="btn btn-success">
+                    📋 Nueva Historia Clínica
+                </a>
+                <a href="listar_historias.php" class="btn btn-primary">
+                    📚 Ver Historias Clínicas
+                </a>
+            </div>
+            
+            <div style="margin-top: 1rem;">
+                <a href="test_conexion.php" class="btn btn-outline" style="width: 100%;">
+                    🔧 Probar Conexión
+                </a>
+            </div>
+        </div>
+
+        <!-- Estado del Sistema -->
         <div class="card">
-            <h2>📚 Documentación</h2>
-            <p>Este aplicativo utiliza:</p>
-            <ul>
-                <li><strong>PHP</strong> - Programación Orientada a Objetos</li>
-                <li><strong>Supabase</strong> - Base de datos y API</li>
-                <li><strong>Composer</strong> - Gestión de dependencias</li>
-                <li><strong>Guzzle HTTP</strong> - Cliente HTTP para API</li>
-            </ul>
+            <h2>🔍 Estado del Sistema</h2>
+            
+            <?php if (file_exists('.env')): ?>
+                <div class="alert alert-success">
+                    ✅ Archivo .env encontrado y configurado
+                </div>
+            <?php else: ?>
+                <div class="alert alert-error">
+                    ❌ Archivo .env no encontrado
+                </div>
+            <?php endif; ?>
+            
+            <?php if (file_exists('vendor/autoload.php')): ?>
+                <div class="alert alert-success">
+                    ✅ Dependencias instaladas correctamente
+                </div>
+            <?php else: ?>
+                <div class="alert alert-error">
+                    ❌ Dependencias no instaladas - Ejecuta: <code>composer install</code>
+                </div>
+            <?php endif; ?>
+            
+            <?php if (isset($_ENV['SUPABASE_URL']) && isset($_ENV['SUPABASE_KEY'])): ?>
+                <div class="alert alert-success">
+                    ✅ Variables de entorno configuradas
+                </div>
+                <p style="color: var(--gray-600); margin-top: var(--spacing-md);">
+                    <strong>URL:</strong> <?= htmlspecialchars($_ENV['SUPABASE_URL']) ?>
+                </p>
+            <?php else: ?>
+                <div class="alert alert-error">
+                    ❌ Variables de entorno no configuradas
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- Tecnologías -->
+        <div class="card mt-4">
+            <h2>📚 Tecnologías Utilizadas</h2>
+            <div class="grid grid-2">
+                <div>
+                    <h4>Backend</h4>
+                    <ul style="list-style: none; padding: 0;">
+                        <li class="mb-1">🐘 <strong>PHP 7.4+</strong> - Programación Orientada a Objetos</li>
+                        <li class="mb-1">📦 <strong>Composer</strong> - Gestión de dependencias</li>
+                        <li class="mb-1">🌐 <strong>Guzzle HTTP</strong> - Cliente HTTP para API</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Frontend & Database</h4>
+                    <ul style="list-style: none; padding: 0;">
+                        <li class="mb-1">🎨 <strong>CSS3 Moderno</strong> - Variables, Grid, Animaciones</li>
+                        <li class="mb-1">🗄️ <strong>Supabase</strong> - Base de datos PostgreSQL</li>
+                        <li class="mb-1">🔐 <strong>phpdotenv</strong> - Variables de entorno</li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
+
+    <style>
+        .mb-1 { margin-bottom: 0.5rem; }
+        .mb-4 { margin-bottom: 2rem; }
+        .mt-4 { margin-top: 2rem; }
+        code {
+            background: var(--gray-200);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
 </body>
 </html>

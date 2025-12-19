@@ -43,9 +43,10 @@ if ($_POST) {
             $id_paciente = $resultadoPaciente[0]['id_paciente'];
         }
         
+        
+        // NOTA: motivo_consulta pertenece a tabla 'consultas', no a 'historias_clinicas'
         $datos = [
             'id_paciente' => $id_paciente,
-            'motivo_consulta' => $_POST['motivo_consulta'],
             'analisis_plan' => $_POST['analisis_plan'],
             'diagnostico' => $_POST['diagnostico'],
             'tratamiento' => $_POST['tratamiento'],
@@ -78,38 +79,25 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Historias Clínicas - POO con PHP</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
-        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
-        textarea { height: 80px; resize: vertical; }
-        .btn { padding: 12px 20px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
-        .btn:hover { background: #005a87; }
-        .btn-secondary { background: #6c757d; margin-left: 10px; text-decoration: none; display: inline-block; }
-        .success { color: #28a745; background: #d4edda; padding: 10px; border-radius: 4px; margin-bottom: 20px; }
-        .error { color: #dc3545; background: #f8d7da; padding: 10px; border-radius: 4px; margin-bottom: 20px; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .form-row { display: flex; gap: 15px; }
-        .form-row .form-group { flex: 1; }
-    </style>
+    <title>Historias Clínicas - Sistema de Gestión Médica</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
-    <div class="container">
-        <div class="header">
+    <div class="container-sm">
+        <div class="card card-gradient text-center mb-4">
             <h1>📋 Nueva Historia Clínica</h1>
-            <p>Crear una nueva historia clínica para un paciente</p>
+            <p style="margin-bottom: 0;">Crear una nueva historia clínica para un paciente</p>
         </div>
 
         <?php if ($mensaje): ?>
-            <div class="success">✅ <?= htmlspecialchars($mensaje) ?></div>
+            <div class="alert alert-success">✅ <?= htmlspecialchars($mensaje) ?></div>
         <?php endif; ?>
 
         <?php if ($error): ?>
-            <div class="error">❌ <?= htmlspecialchars($error) ?></div>
+            <div class="alert alert-error">❌ <?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
+
+        <div class="card">
 
         <form method="POST">
             <div class="form-group">
@@ -162,10 +150,14 @@ try {
                 </div>
             </div>
 
+            
+            <!-- CAMPO DESHABILITADO: motivo_consulta está en la tabla 'consultas', no en 'historias_clinicas' -->
+            <!--
             <div class="form-group">
                 <label for="motivo_consulta">Motivo de Consulta *</label>
-                <textarea name="motivo_consulta" id="motivo_consulta" required placeholder="Describe el motivo de la consulta..."></textarea>
+                <textarea name="motivo_consulta" id="motivo_consulta" placeholder="Describe el motivo de la consulta..."></textarea>
             </div>
+            -->
 
             <div class="form-group">
                 <label for="analisis_plan">Análisis y Plan</label>
@@ -193,10 +185,11 @@ try {
             </div>
 
             <div style="text-align: center; margin-top: 30px;">
-                <button type="submit" class="btn">💾 Guardar Historia Clínica</button>
-                <a href="index.php" class="btn btn-secondary">🏠 Volver al Inicio</a>
+                <button type="submit" class="btn btn-primary btn-lg">💾 Guardar Historia Clínica</button>
+                <a href="index.php" class="btn btn-secondary btn-lg">🏠 Volver al Inicio</a>
             </div>
         </form>
+        </div>
     </div>
 
     <script>
