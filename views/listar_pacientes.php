@@ -70,7 +70,7 @@ try {
             <div id="filter-panel" style="display: none;">
                 <div class="filter-row">
                     <div class="filter-group">
-                        <label for="search-input">Buscar por nombre o apellido</label>
+                        <label for="search-input">Buscar</label>
                         <input 
                             type="text" 
                             id="search-input"

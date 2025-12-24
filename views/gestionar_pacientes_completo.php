@@ -83,7 +83,11 @@ if ($_POST) {
             'hech_victimizantes' => $_POST['hech_victimizantes'] ?? null,
             
             // Acudiente
-            'acudiente_id' => !empty($_POST['acudiente_id']) ? (int)$_POST['acudiente_id'] : null
+            'acudiente_nombre' => $_POST['acudiente_nombre'] ?? null,
+            'acudiente_telefono' => $_POST['acudiente_telefono'] ?? null,
+            'acudiente_parentesco' => $_POST['acudiente_parentesco'] ?? null,
+            'acudiente_documento' => $_POST['acudiente_documento'] ?? null,
+            'acudiente_direccion' => $_POST['acudiente_direccion'] ?? null
         ];
 
         if ($isEdit && isset($_POST['id_paciente'])) {
@@ -503,19 +507,53 @@ if (isset($_GET['success']) && !$error) {
                 <div class="tab-content" id="tab-7">
                     <h3>👨‍👩‍👧 Acudiente / Responsable</h3>
                     
+                    <div class="field-grid">
+                        <div class="form-group">
+                            <label for="acudiente_nombre">Nombre del Acudiente</label>
+                            <input type="text" name="acudiente_nombre" id="acudiente_nombre"
+                                   value="<?= $isEdit ? htmlspecialchars($paciente['acudiente_nombre'] ?? '') : '' ?>"
+                                   placeholder="Ej: María González">
+                            <small class="help-text">Nombre completo del acudiente</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="acudiente_telefono">Teléfono del Acudiente</label>
+                            <input type="tel" name="acudiente_telefono" id="acudiente_telefono"
+                                   value="<?= $isEdit ? htmlspecialchars($paciente['acudiente_telefono'] ?? '') : '' ?>"
+                                   placeholder="Ej: 3009876543">
+                            <small class="help-text">Solo números</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="acudiente_parentesco">Parentesco</label>
+                            <select name="acudiente_parentesco" id="acudiente_parentesco">
+                                <option value="">Seleccionar...</option>
+                                <option value="Padre" <?= ($isEdit && ($paciente['acudiente_parentesco'] ?? '') == 'Padre') ? 'selected' : '' ?>>Padre</option>
+                                <option value="Madre" <?= ($isEdit && ($paciente['acudiente_parentesco'] ?? '') == 'Madre') ? 'selected' : '' ?>>Madre</option>
+                                <option value="Hermano/a" <?= ($isEdit && ($paciente['acudiente_parentesco'] ?? '') == 'Hermano/a') ? 'selected' : '' ?>>Hermano/a</option>
+                                <option value="Abuelo/a" <?= ($isEdit && ($paciente['acudiente_parentesco'] ?? '') == 'Abuelo/a') ? 'selected' : '' ?>>Abuelo/a</option>
+                                <option value="Tío/a" <?= ($isEdit && ($paciente['acudiente_parentesco'] ?? '') == 'Tío/a') ? 'selected' : '' ?>>Tío/a</option>
+                                <option value="Cónyuge" <?= ($isEdit && ($paciente['acudiente_parentesco'] ?? '') == 'Cónyuge') ? 'selected' : '' ?>>Cónyuge</option>
+                                <option value="Tutor Legal" <?= ($isEdit && ($paciente['acudiente_parentesco'] ?? '') == 'Tutor Legal') ? 'selected' : '' ?>>Tutor Legal</option>
+                                <option value="Otro" <?= ($isEdit && ($paciente['acudiente_parentesco'] ?? '') == 'Otro') ? 'selected' : '' ?>>Otro</option>
+                            </select>
+                            <small class="help-text">Relación con el paciente</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="acudiente_documento">Documento del Acudiente</label>
+                            <input type="text" name="acudiente_documento" id="acudiente_documento"
+                                   value="<?= $isEdit ? htmlspecialchars($paciente['acudiente_documento'] ?? '') : '' ?>"
+                                   placeholder="Ej: 12345678">
+                            <small class="help-text">Documento de identidad</small>
+                        </div>
+                    </div>
+
                     <div class="form-group">
-                        <label for="acudiente_id">Seleccionar Acudiente</label>
-                        <select name="acudiente_id" id="acudiente_id">
-                            <option value="">Sin acudiente / No aplica</option>
-                            <?php foreach ($formData['acudientes'] as $acudiente): ?>
-                                <option value="<?= $acudiente['id'] ?>"
-                                    <?= ($isEdit && $paciente['acudiente_id'] == $acudiente['id']) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($acudiente['nombre']) ?> 
-                                    <?= $acudiente['parentesco'] ? '(' . htmlspecialchars($acudiente['parentesco']) . ')' : '' ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <small class="help-text">Para menores de edad o personas con tutela</small>
+                        <label for="acudiente_direccion">Dirección del Acudiente</label>
+                        <textarea name="acudiente_direccion" id="acudiente_direccion" rows="2"
+                                  placeholder="Ej: Calle 123 #45-67, Barrio Centro"><?= $isEdit ? htmlspecialchars($paciente['acudiente_direccion'] ?? '') : '' ?></textarea>
+                        <small class="help-text">Dirección completa del acudiente</small>
                     </div>
                 </div>
 
