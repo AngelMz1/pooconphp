@@ -83,6 +83,11 @@ try {
     <link rel="stylesheet" href="../assets/css/styles.css">
 </head>
 <body>
+    <div class="dashboard-container">
+        <?php include '../includes/sidebar.php'; ?>
+        <?php include '../includes/header.php'; ?>
+        
+        <main class="main-content">
     <div class="container-sm">
         <div class="card card-gradient text-center mb-4">
             <h1>📋 Nueva Historia Clínica</h1>
@@ -212,5 +217,7 @@ try {
             }
         }
     </script>
+        </main>
+    </div>
 </body>
 </html>

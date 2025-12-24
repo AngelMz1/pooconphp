@@ -3,6 +3,7 @@ require_once '../vendor/autoload.php';
 
 use App\SupabaseClient;
 use App\Paciente;
+use App\ReferenceData;
 use Dotenv\Dotenv;
 
 $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
@@ -10,11 +11,15 @@ $dotenv->load();
 
 $supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
 $pacienteModel = new Paciente($supabase);
+$refData = new ReferenceData($supabase);
 
 $mensaje = '';
 $error = '';
 $paciente = null;
 $isEdit = false;
+
+// Cargar datos de referencia
+$formData = $refData->getAllForPatientForm();
 
 // Determinar si es edición
 if (isset($_GET['id'])) {
@@ -29,38 +34,98 @@ if (isset($_GET['id'])) {
     }
 }
 
+$currentAcudiente = null;
+if ($isEdit && $paciente && !empty($paciente['acudiente_id'])) {
+    foreach ($formData['acudientes'] as $ac) {
+        if ($ac['id'] == $paciente['acudiente_id']) {
+            $currentAcudiente = $ac;
+            break;
+        }
+    }
+}
+
 // Procesar formulario
 if ($_POST) {
     try {
+        // Preparar TODOS los datos del paciente
         $datos = [
+            // Identificación
+            'tipo_documento_id' => $_POST['tipo_documento_id'] ?? 1,
             'documento_id' => $_POST['documento_id'],
+            
+            // Nombres completos (todos requeridos según schema)
             'primer_nombre' => $_POST['primer_nombre'],
-            'segundo_nombre' => $_POST['segundo_nombre'] ?? null,
+            'segundo_nombre' => $_POST['segundo_nombre'] ?? '',
             'primer_apellido' => $_POST['primer_apellido'],
-            'segundo_apellido' => $_POST['segundo_apellido'] ?? null,
+            'segundo_apellido' => $_POST['segundo_apellido'] ?? '',
+            
+            // Datos básicos
             'fecha_nacimiento' => $_POST['fecha_nacimiento'] ?? null,
-            'telefono' => $_POST['telefono'] ?? null,
-            'email' => $_POST['email'] ?? null,
+            'sexo_id' => $_POST['sexo_id'] ?? null,
+            
+            // Ubicación
             'direccion' => $_POST['direccion'] ?? null,
-            'estrato' => $_POST['estrato'] ?? null
+            'telefono' => $_POST['telefono'] ?? null,
+            'ciudad_id' => (int)$_POST['ciudad_id'],
+            'lugar_nacimiento' => (int)$_POST['lugar_nacimiento'],
+            'barrio_id' => !empty($_POST['barrio_id']) ? (int)$_POST['barrio_id'] : null,
+            
+            // Salud y aseguramiento
+            'eps_id' => (int)$_POST['eps_id'],
+            'regimen_id' => !empty($_POST['regimen_id']) ? (int)$_POST['regimen_id'] : null,
+            'gs_rh_id' => (int)$_POST['gs_rh_id'],
+            
+            // Datos sociodemográficos
+            'estrato' => (int)$_POST['estrato'],
+            'estado_civil_id' => !empty($_POST['estado_civil_id']) ? (int)$_POST['estado_civil_id'] : null,
+            'ocupacion' => $_POST['ocupacion'] ?? null,
+            'escolaridad_id' => !empty($_POST['escolaridad_id']) ? (int)$_POST['escolaridad_id'] : null,
+            
+            // Diversidad
+            'etnia_id' => !empty($_POST['etnia_id']) ? (int)$_POST['etnia_id'] : null,
+            'orien_sexual_id' => !empty($_POST['orien_sexual_id']) ? (int)$_POST['orien_sexual_id'] : null,
+            
+            // Vulnerabilidad social
+            'g_poblacion' => $_POST['g_poblacion'] ?? null,
+            'prog_social' => $_POST['prog_social'] ?? null,
+            'discapacidad' => $_POST['discapacidad'] ?? null,
+            'cond_vulnerabilidad' => $_POST['cond_vulnerabilidad'] ?? null,
+            'hech_victimizantes' => $_POST['hech_victimizantes'] ?? null,
+            
+            // Acudiente
+            'acudiente_id' => !empty($_POST['acudiente_id']) ? (int)$_POST['acudiente_id'] : null
         ];
 
-        // Limpiar valores vacíos
-        $datos = array_filter($datos, function($value) {
-            return $value !== null && $value !== '';
-        });
+        // Verificar si se ingresó un nuevo acudiente (Prioridad sobre selección)
+        if (!empty($_POST['acudiente_nombre'])) {
+            $datosAcudiente = [
+                'nombre' => $_POST['acudiente_nombre'],
+                'parentesco' => $_POST['acudiente_parentesco'] ?? null,
+                'telefono' => $_POST['acudiente_telefono'] ?? null
+            ];
+            
+            // Intentar crear el acudiente
+            try {
+                $nuevoAcudiente = $refData->crearAcudiente($datosAcudiente);
+                // Supabase retorna un array de objetos insertados
+                if ($nuevoAcudiente && isset($nuevoAcudiente[0]['id'])) {
+                    $datos['acudiente_id'] = $nuevoAcudiente[0]['id'];
+                }
+            } catch (Exception $e) {
+                // Agregar al error pero permitir continuar si es posible (aunque es mejor detener)
+                throw new Exception("Error al crear el acudiente: " . $e->getMessage());
+            }
+        }
 
         if ($isEdit && isset($_POST['id_paciente'])) {
-            // Actualizar paciente existente
+            // Actualizar
             $resultado = $pacienteModel->actualizar($_POST['id_paciente'], $datos);
             $mensaje = "✅ Paciente actualizado exitosamente";
-            // Recargar datos del paciente
             $paciente = $pacienteModel->obtenerPorId($_POST['id_paciente']);
         } else {
-            // Crear nuevo paciente
+            // Crear
             $resultado = $pacienteModel->crear($datos);
             $mensaje = "✅ Paciente creado exitosamente con ID: " . $resultado[0]['id_paciente'];
-            // Redirigir a modo edición
             header("Location: gestionar_pacientes.php?id=" . $resultado[0]['id_paciente'] . "&success=1");
             exit;
         }
@@ -69,7 +134,6 @@ if ($_POST) {
     }
 }
 
-// Mostrar mensaje de éxito si viene de redirección
 if (isset($_GET['success']) && !$error) {
     $mensaje = "✅ Paciente creado exitosamente";
 }
@@ -80,16 +144,65 @@ if (isset($_GET['success']) && !$error) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $isEdit ? 'Editar Paciente' : 'Nuevo Paciente' ?> - Sistema de Gestión Médica</title>
+    <title><?= $isEdit ? 'Editar Paciente' : 'Nuevo Paciente' ?> - Sistema Médico</title>
     <link rel="stylesheet" href="../assets/css/styles.css">
+    <style>
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--gray-200);
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-weight: 500;
+            color: var(--gray-600);
+            transition: all var(--transition-normal);
+        }
+        .tab-btn:hover {
+            color: var(--primary);
+            background: var(--gray-100);
+        }
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            font-weight: 600;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        .field-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .help-text {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            margin-top: 0.25rem;
+        }
+    </style>
 </head>
 <body>
-    <div class="container-sm">
+    <div class="dashboard-container">
+        <?php include '../includes/sidebar.php'; ?>
+        <?php include '../includes/header.php'; ?>
+        
+        <main class="main-content">
+    <div class="container">
         <div class="card card-gradient text-center mb-4">
             <h1><?= $isEdit ? '✏️ Editar Paciente' : '➕ Nuevo Paciente' ?></h1>
-            <p style="margin-bottom: 0;">
-                <?= $isEdit ? 'Actualizar información del paciente' : 'Registrar nuevo paciente en el sistema' ?>
-            </p>
+            <p style="margin-bottom: 0;">Formulario completo con todos los campos del sistema</p>
         </div>
 
         <?php if ($mensaje): ?>
@@ -106,33 +219,227 @@ if (isset($_GET['success']) && !$error) {
                     <input type="hidden" name="id_paciente" value="<?= $paciente['id_paciente'] ?>">
                 <?php endif; ?>
 
-                <!-- Información Básica -->
-                <div class="form-section">
-                    <h3>📋 Información Básica</h3>
+                <!-- Tabs de Navegación -->
+                <div class="tabs">
+                    <button type="button" class="tab-btn active" onclick="showTab(0)">🆔 Identificación</button>
+                    <button type="button" class="tab-btn" onclick="showTab(1)">👤 Datos Personales</button>
+                    <button type="button" class="tab-btn" onclick="showTab(2)">📍 Ubicación</button>
+                    <button type="button" class="tab-btn" onclick="showTab(3)">🏥 Salud y EPS</button>
+                    <button type="button" class="tab-btn" onclick="showTab(4)">📊 Sociodemográficos</button>
+                    <button type="button" class="tab-btn" onclick="showTab(5)">🌈 Diversidad</button>
+                    <button type="button" class="tab-btn" onclick="showTab(6)">⚠️ Vulnerabilidad</button>
+                    <button type="button" class="tab-btn" onclick="showTab(7)">👨‍👩‍👧 Acudiente</button>
+                </div>
+
+                <!-- Tab 1: Identificación -->
+                <div class="tab-content active" id="tab-0">
+                    <h3>🆔 Identificación del Paciente</h3>
                     
-                    <div class="form-row">
+                    <div class="field-grid">
                         <div class="form-group">
-                            <label for="documento_id">
-                                Documento de Identidad <span class="required-indicator">*</span>
-                            </label>
-                            <input 
-                                type="text" 
-                                name="documento_id" 
-                                id="documento_id" 
-                                value="<?= $isEdit ? htmlspecialchars($paciente['documento_id']) : '' ?>"
-                                required
-                                placeholder="Ej: 1234567890"
-                                <?= $isEdit ? 'readonly style="background: var(--gray-200);"' : '' ?>
-                            >
-                            <?php if (!$isEdit): ?>
-                                <small class="form-help">El documento no podrá modificarse después de crear el paciente</small>
-                            <?php endif; ?>
+                            <label for="tipo_documento_id">Tipo de Documento <span class="required-indicator">*</span></label>
+                            <select name="tipo_documento_id" id="tipo_documento_id" required>
+                                <?php foreach ($formData['tipos_documento'] as $tipo): ?>
+                                    <option value="<?= $tipo['id'] ?>" 
+                                        <?= ($isEdit && $paciente['tipo_documento_id'] == $tipo['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($tipo['codigo']) ?> - <?= htmlspecialchars($tipo['descripcion']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
 
                         <div class="form-group">
-                            <label for="estrato">
-                                Estrato Socioeconómico <span class="required-indicator">*</span>
-                            </label>
+                            <label for="documento_id">Número de Documento <span class="required-indicator">*</span></label>
+                            <input type="text" name="documento_id" id="documento_id" required
+                                   value="<?= $isEdit ? htmlspecialchars($paciente['documento_id']) : '' ?>"
+                                   pattern="[0-9]{8,10}"
+                                   <?= $isEdit ? 'readonly style="background: var(--gray-200);"' : '' ?>>
+                            <small class="help-text">Entre 8 y 10 dígitos numéricos <?= $isEdit ? '(no modificable)' : '' ?></small>
+                        </div>
+                    </div>
+
+                    <h4 class="mt-3">📝 Nombre Completo</h4>
+                    <div class="field-grid">
+                        <div class="form-group">
+                            <label for="primer_nombre">Primer Nombre <span class="required-indicator">*</span></label>
+                            <input type="text" name="primer_nombre" id="primer_nombre" required
+                                   value="<?= $isEdit ? htmlspecialchars($paciente['primer_nombre']) : '' ?>">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="segundo_nombre">Segundo Nombre</label>
+                            <input type="text" name="segundo_nombre" id="segundo_nombre"
+                                   value="<?= $isEdit ? htmlspecialchars($paciente['segundo_nombre'] ?? '') : '' ?>">
+                            <small class="help-text">Opcional</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="primer_apellido">Primer Apellido <span class="required-indicator">*</span></label>
+                            <input type="text" name="primer_apellido" id="primer_apellido" required
+                                   value="<?= $isEdit ? htmlspecialchars($paciente['primer_apellido']) : '' ?>">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="segundo_apellido">Segundo Apellido</label>
+                            <input type="text" name="segundo_apellido" id="segundo_apellido"
+                                   value="<?= $isEdit ? htmlspecialchars($paciente['segundo_apellido'] ?? '') : '' ?>">
+                            <small class="help-text">Opcional</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Datos Personales -->
+                <div class="tab-content" id="tab-1">
+                    <h3>👤 Datos Personales</h3>
+                    
+                    <div class="field-grid">
+                        <div class="form-group">
+                            <label for="fecha_nacimiento">Fecha de Nacimiento</label>
+                            <input type="date" name="fecha_nacimiento" id="fecha_nacimiento"
+                                   value="<?= $isEdit ? htmlspecialchars($paciente['fecha_nacimiento'] ?? '') : '' ?>">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="sexo_id">Sexo</label>
+                            <select name="sexo_id" id="sexo_id">
+                                <option value="">Seleccionar...</option>
+                                <?php foreach ($formData['sexos'] as $sexo): ?>
+                                    <option value="<?= $sexo['id'] ?>"
+                                        <?= ($isEdit && $paciente['sexo_id'] == $sexo['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($sexo['sexo']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="estado_civil_id">Estado Civil</label>
+                            <select name="estado_civil_id" id="estado_civil_id">
+                                <option value="">Seleccionar...</option>
+                                <?php foreach ($formData['estados_civiles'] as $ec): ?>
+                                    <option value="<?= $ec['id'] ?>"
+                                        <?= ($isEdit && $paciente['estado_civil_id'] == $ec['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($ec['estado_civil']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ocupacion">Ocupación</label>
+                            <input type="text" name="ocupacion" id="ocupacion" maxlength="1"
+                                   value="<?= $isEdit ? htmlspecialchars($paciente['ocupacion'] ?? '') : '' ?>">
+                            <small class="help-text">Un carácter</small>
+                        </div>
+                    </div>
+
+                    <div class="field-grid">
+                        <div class="form-group">
+                            <label for="telefono">Teléfono</label>
+                            <input type="tel" name="telefono" id="telefono"
+                                   value="<?= $isEdit ? htmlspecialchars($paciente['telefono'] ?? '') : '' ?>">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Ubicación -->
+                <div class="tab-content" id="tab-2">
+                    <h3>📍 Ubicación</h3>
+                    
+                    <div class="field-grid">
+                        <div class="form-group">
+                            <label for="ciudad_id">Ciudad de Residencia <span class="required-indicator">*</span></label>
+                            <select name="ciudad_id" id="ciudad_id" required onchange="loadBarrios(this.value)">
+                                <option value="">Seleccionar...</option>
+                                <?php foreach ($formData['ciudades'] as $ciudad): ?>
+                                    <option value="<?= $ciudad['id'] ?>"
+                                        <?= ($isEdit && $paciente['ciudad_id'] == $ciudad['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($ciudad['nombre']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="barrio_id">Barrio</label>
+                            <select name="barrio_id" id="barrio_id">
+                                <option value="">Seleccionar primero una ciudad...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="lugar_nacimiento">Lugar de Nacimiento <span class="required-indicator">*</span></label>
+                            <select name="lugar_nacimiento" id="lugar_nacimiento" required>
+                                <option value="">Seleccionar...</option>
+                                <?php foreach ($formData['ciudades'] as $ciudad): ?>
+                                    <option value="<?= $ciudad['id'] ?>"
+                                        <?= ($isEdit && $paciente['lugar_nacimiento'] == $ciudad['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($ciudad['nombre']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="direccion">Dirección Completa</label>
+                        <textarea name="direccion" id="direccion" rows="2"><?= $isEdit ? htmlspecialchars($paciente['direccion'] ?? '') : '' ?></textarea>
+                    </div>
+                </div>
+
+                <!-- Tab 4: Salud y EPS -->
+                <div class="tab-content" id="tab-3">
+                    <h3>🏥 Salud y Aseguramiento</h3>
+                    
+                    <div class="field-grid">
+                        <div class="form-group">
+                            <label for="eps_id">EPS <span class="required-indicator">*</span></label>
+                            <select name="eps_id" id="eps_id" required>
+                                <option value="">Seleccionar...</option>
+                                <?php foreach ($formData['eps'] as $eps): ?>
+                                    <option value="<?= $eps['id'] ?>"
+                                        <?= ($isEdit && $paciente['eps_id'] == $eps['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($eps['nombre_eps']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="regimen_id">Régimen</label>
+                            <select name="regimen_id" id="regimen_id">
+                                <option value="">Seleccionar...</option>
+                                <?php foreach ($formData['regimenes'] as $regimen): ?>
+                                    <option value="<?= $regimen['id'] ?>"
+                                        <?= ($isEdit && $paciente['regimen_id'] == $regimen['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($regimen['regimen']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="gs_rh_id">Grupo Sanguíneo y RH <span class="required-indicator">*</span></label>
+                            <select name="gs_rh_id" id="gs_rh_id" required>
+                                <option value="">Seleccionar...</option>
+                                <?php foreach ($formData['grupos_sanguineos'] as $gs): ?>
+                                    <option value="<?= $gs['id'] ?>"
+                                        <?= ($isEdit && $paciente['gs_rh_id'] == $gs['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($gs['nombre']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 5: Sociodemográficos -->
+                <div class="tab-content" id="tab-4">
+                    <h3>📊 Datos Sociodemográficos</h3>
+                    
+                    <div class="field-grid">
+                        <div class="form-group">
+                            <label for="estrato">Estrato Socioeconómico <span class="required-indicator">*</span></label>
                             <select name="estrato" id="estrato" required>
                                 <option value="">Seleccionar...</option>
                                 <?php for ($i = 1; $i <= 6; $i++): ?>
@@ -141,143 +448,144 @@ if (isset($_GET['success']) && !$error) {
                                     </option>
                                 <?php endfor; ?>
                             </select>
-                            <small class="form-help">Estrato socioeconómico del paciente (1-6)</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="escolaridad_id">Escolaridad</label>
+                            <select name="escolaridad_id" id="escolaridad_id">
+                                <option value="">Seleccionar...</option>
+                                <?php foreach ($formData['escolaridades'] as $esc): ?>
+                                    <option value="<?= $esc['id'] ?>"
+                                        <?= ($isEdit && $paciente['escolaridad_id'] == $esc['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($esc['escolaridad']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="g_poblacion">Grupo Poblacional</label>
+                            <input type="text" name="g_poblacion" id="g_poblacion"
+                                   value="<?= $isEdit ? htmlspecialchars($paciente['g_poblacion'] ?? '') : '' ?>">
+                            <small class="help-text">Ej: Indígena, Afrodescendiente, ROM, etc.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="prog_social">Programas Sociales</label>
+                            <input type="text" name="prog_social" id="prog_social"
+                                   value="<?= $isEdit ? htmlspecialchars($paciente['prog_social'] ?? '') : '' ?>">
+                            <small class="help-text">Ej: Familias en Acción, etc.</small>
                         </div>
                     </div>
                 </div>
 
-                <!-- Nombres -->
-                <div class="form-section">
-                    <h3>👤 Nombres</h3>
+                <!-- Tab 6: Diversidad -->
+                <div class="tab-content" id="tab-5">
+                    <h3>🌈 Diversidad</h3>
                     
-                    <div class="form-row">
+                    <div class="field-grid">
                         <div class="form-group">
-                            <label for="primer_nombre">
-                                Primer Nombre <span class="required-indicator">*</span>
-                            </label>
-                            <input 
-                                type="text" 
-                                name="primer_nombre" 
-                                id="primer_nombre"
-                                value="<?= $isEdit ? htmlspecialchars($paciente['primer_nombre']) : '' ?>"
-                                required
-                                placeholder="Ej: Juan"
-                            >
+                            <label for="etnia_id">Etnia</label>
+                            <select name="etnia_id" id="etnia_id">
+                                <option value="">Seleccionar...</option>
+                                <?php foreach ($formData['etnias'] as $etnia): ?>
+                                    <option value="<?= $etnia['id'] ?>"
+                                        <?= ($isEdit && $paciente['etnia_id'] == $etnia['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($etnia['etnia']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
 
                         <div class="form-group">
-                            <label for="segundo_nombre">Segundo Nombre</label>
-                            <input 
-                                type="text" 
-                                name="segundo_nombre" 
-                                id="segundo_nombre"
-                                value="<?= $isEdit ? htmlspecialchars($paciente['segundo_nombre'] ?? '') : '' ?>"
-                                placeholder="Ej: Carlos"
-                            >
-                            <small class="form-help">Opcional</small>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="primer_apellido">
-                                Primer Apellido <span class="required-indicator">*</span>
-                            </label>
-                            <input 
-                                type="text" 
-                                name="primer_apellido" 
-                                id="primer_apellido"
-                                value="<?= $isEdit ? htmlspecialchars($paciente['primer_apellido']) : '' ?>"
-                                required
-                                placeholder="Ej: Pérez"
-                            >
-                        </div>
-
-                        <div class="form-group">
-                            <label for="segundo_apellido">Segundo Apellido</label>
-                            <input 
-                                type="text" 
-                                name="segundo_apellido" 
-                                id="segundo_apellido"
-                                value="<?= $isEdit ? htmlspecialchars($paciente['segundo_apellido'] ?? '') : '' ?>"
-                                placeholder="Ej: González"
-                            >
-                            <small class="form-help">Opcional</small>
+                            <label for="orien_sexual_id">Orientación Sexual</label>
+                            <select name="orien_sexual_id" id="orien_sexual_id">
+                                <option value="">Seleccionar...</option>
+                                <?php foreach ($formData['orientaciones_sexuales'] as $os): ?>
+                                    <option value="<?= $os['id'] ?>"
+                                        <?= ($isEdit && $paciente['orien_sexual_id'] == $os['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($os['orientacion']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                     </div>
                 </div>
 
-                <!-- Información de Contacto -->
-                <div class="form-section">
-                    <h3>📞 Información de Contacto</h3>
+                <!-- Tab 7: Vulnerabilidad -->
+                <div class="tab-content" id="tab-6">
+                    <h3>⚠️ Vulnerabilidad Social</h3>
                     
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="telefono">Teléfono</label>
-                            <input 
-                                type="tel" 
-                                name="telefono" 
-                                id="telefono"
-                                value="<?= $isEdit ? htmlspecialchars($paciente['telefono'] ?? '') : '' ?>"
-                                placeholder="Ej: 3001234567"
-                            >
-                            <small class="form-help">Opcional - Solo números</small>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="email">Correo Electrónico</label>
-                            <input 
-                                type="email" 
-                                name="email" 
-                                id="email"
-                                value="<?= $isEdit ? htmlspecialchars($paciente['email'] ?? '') : '' ?>"
-                                placeholder="Ej: paciente@ejemplo.com"
-                            >
-                            <small class="form-help">Opcional</small>
-                        </div>
+                    <div class="form-group">
+                        <label for="discapacidad">Discapacidad</label>
+                        <textarea name="discapacidad" id="discapacidad" rows="2"><?= $isEdit ? htmlspecialchars($paciente['discapacidad'] ?? '') : '' ?></textarea>
+                        <small class="help-text">Describir tipo de discapacidad si aplica</small>
                     </div>
 
                     <div class="form-group">
-                        <label for="direccion">Dirección</label>
-                        <textarea 
-                            name="direccion" 
-                            id="direccion"
-                            rows="2"
-                            placeholder="Ej: Calle 123 #45-67, Barrio Centro"
-                        ><?= $isEdit ? htmlspecialchars($paciente['direccion'] ?? '') : '' ?></textarea>
-                        <small class="form-help">Opcional</small>
+                        <label for="cond_vulnerabilidad">Condición de Vulnerabilidad</label>
+                        <textarea name="cond_vulnerabilidad" id="cond_vulnerabilidad" rows="2"><?= $isEdit ? htmlspecialchars($paciente['cond_vulnerabilidad'] ?? '') : '' ?></textarea>
+                        <small class="help-text">Ej: Desplazamiento, pobreza extrema, etc.</small>
                     </div>
-                </div>
 
-                <!-- Información Adicional -->
-                <div class="form-section">
-                    <h3>📅 Información Adicional</h3>
-                    
                     <div class="form-group">
-                        <label for="fecha_nacimiento">Fecha de Nacimiento</label>
-                        <input 
-                            type="date" 
-                            name="fecha_nacimiento" 
-                            id="fecha_nacimiento"
-                            value="<?= $isEdit ? htmlspecialchars($paciente['fecha_nacimiento'] ?? '') : '' ?>"
-                        >
-                        <small class="form-help">Opcional</small>
+                        <label for="hech_victimizantes">Hechos Victimizantes</label>
+                        <textarea name="hech_victimizantes" id="hech_victimizantes" rows="2"><?= $isEdit ? htmlspecialchars($paciente['hech_victimizantes'] ?? '') : '' ?></textarea>
+                        <small class="help-text">Violencia, desplazamiento forzado, etc.</small>
                     </div>
                 </div>
 
-                <!-- Botones de Acción -->
-                <div style="text-align: center; margin-top: 30px; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                    <button type="submit" class="btn btn-primary btn-lg">
-                        <?= $isEdit ? '💾 Actualizar Paciente' : '➕ Crear Paciente' ?>
-                    </button>
-                    <a href="listar_pacientes.php" class="btn btn-secondary btn-lg">
-                        ← Volver a la Lista
-                    </a>
-                    <?php if ($isEdit): ?>
-                        <a href="ver_paciente.php?id=<?= $paciente['id_paciente'] ?>" class="btn btn-outline btn-lg">
-                            👁️ Ver Detalles
-                        </a>
-                    <?php endif; ?>
+                <!-- Tab 8: Acudiente -->
+                <div class="tab-content" id="tab-7">
+                    <h3>👨‍👩‍👧 Acudiente / Responsable</h3>
+                    
+                    <div class="alert alert-info" style="margin-bottom: 1rem; padding: 0.5rem 1rem;">
+                        <small>ℹ️ Ingrese los datos del acudiente si el paciente lo requiere (Menor de edad, Adulto Mayor, Discapacidad).</small>
+                    </div>
+
+                    <div class="field-grid">
+                        <div class="form-group">
+                            <label for="acudiente_nombre">Nombre Completo del Acudiente</label>
+                            <input type="text" name="acudiente_nombre" id="acudiente_nombre"
+                                   placeholder="Nombre completo"
+                                   value="<?= $currentAcudiente ? htmlspecialchars($currentAcudiente['nombre']) : '' ?>">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="acudiente_parentesco">Parentesco</label>
+                            <input type="text" name="acudiente_parentesco" id="acudiente_parentesco"
+                                   placeholder="Ej: Padre, Madre, Hijo, Esposo/a"
+                                   value="<?= $currentAcudiente ? htmlspecialchars($currentAcudiente['parentesco'] ?? '') : '' ?>">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="acudiente_telefono">Teléfono de Contacto</label>
+                            <input type="tel" name="acudiente_telefono" id="acudiente_telefono"
+                                   placeholder="Ej: 3001234567"
+                                   value="<?= $currentAcudiente ? htmlspecialchars($currentAcudiente['telefono'] ?? '') : '' ?>">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botones de Navegación -->
+                <div class="card-footer" style="margin-top: 2rem; padding-top: 2rem; border-top: 2px solid var(--gray-200);">
+                    <div style="display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-secondary" id="prevBtn" onclick="navigateTab(-1)" style="display: none;">
+                            ← Anterior
+                        </button>
+                        <button type="button" class="btn btn-primary" id="nextBtn" onclick="navigateTab(1)">
+                            Siguiente →
+                        </button>
+                        <button type="submit" class="btn btn-success btn-lg" id="submitBtn" style="display: none;">
+                            💾 <?= $isEdit ? 'Actualizar' : 'Crear' ?> Paciente
+                        </button>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <a href="listar_pacientes.php" class="btn btn-outline">← Volver a la Lista</a>
+                        <?php if ($isEdit): ?>
+                            <a href="ver_paciente.php?id=<?= $paciente['id_paciente'] ?>" class="btn btn-outline">👁️ Ver Detalles</a>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </form>
         </div>
@@ -285,43 +593,72 @@ if (isset($_GET['success']) && !$error) {
 
     <script src="../assets/js/app.js"></script>
     <script>
+        let currentTab = 0;
+        const totalTabs = 8;
+
+        function showTab(n) {
+            const tabs = document.querySelectorAll('.tab-content');
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            
+            tabs.forEach(tab => tab.classList.remove('active'));
+            tabBtns.forEach(btn => btn.classList.remove('active'));
+            
+            tabs[n].classList.add('active');
+            tabBtns[n].classList.add('active');
+            
+            currentTab = n;
+            updateButtons();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function navigateTab(direction) {
+            const newTab = currentTab + direction;
+            if (newTab >= 0 && newTab < totalTabs) {
+                showTab(newTab);
+            }
+        }
+
+        function updateButtons() {
+            document.getElementById('prevBtn').style.display = currentTab === 0 ? 'none' : 'inline-flex';
+            document.getElementById('nextBtn').style.display = currentTab === totalTabs - 1 ? 'none' : 'inline-flex';
+            document.getElementById('submitBtn').style.display = currentTab === totalTabs - 1 ? 'inline-flex' : 'none';
+        }
+
+        // Cargar barrios cuando se selecciona ciudad
+        function loadBarrios(ciudadId) {
+            // Por ahora, esto se maneja en el servidor
+            // Podrías implementar AJAX aquí para cargar barrios dinámicamente
+        }
+
         // Validación del formulario
         document.getElementById('patientForm').addEventListener('submit', function(e) {
-            const estrato = document.getElementById('estrato').value;
             const documento = document.getElementById('documento_id').value;
             
-            // Validar estrato
-            if (!FormValidator.validateEstrato(estrato)) {
-                e.preventDefault();
-                alert('El estrato debe estar entre 1 y 6');
-                return false;
-            }
-
-            // Validar documento (solo si es creación)
             <?php if (!$isEdit): ?>
             if (!FormValidator.validateDocumento(documento)) {
                 e.preventDefault();
-                alert('El documento debe tener entre 5 y 20 caracteres');
+                alert('El documento debe tener entre 8 y 10 dígitos');
+                showTab(0);
                 return false;
             }
             <?php endif; ?>
 
-            // Validar email si se proporciona
-            const email = document.getElementById('email').value;
-            if (email && !FormValidator.validateEmail(email)) {
-                e.preventDefault();
-                alert('El correo electrónico no es válido');
-                return false;
-            }
-
-            // Validar teléfono si se proporciona
-            const telefono = document.getElementById('telefono').value;
-            if (telefono && !FormValidator.validatePhone(telefono)) {
-                e.preventDefault();
-                alert('El teléfono debe contener solo números (7-15 dígitos)');
-                return false;
+            // Validar campos requeridos del tab actual
+            const requiredFields = document.querySelectorAll('.tab-content.active [required]');
+            for (let field of requiredFields) {
+                if (!field.value) {
+                    e.preventDefault();
+                    alert('Por favor complete todos los campos requeridos (*)');
+                    field.focus();
+                    return false;
+                }
             }
         });
+
+        // Inicializar
+        updateButtons();
     </script>
+        </main>
+    </div>
 </body>
 </html>

@@ -123,6 +123,11 @@ function getNombreReferencia($array, $id, $campo = 'nombre') {
     </style>
 </head>
 <body>
+    <div class="dashboard-container">
+        <?php include '../includes/sidebar.php'; ?>
+        <?php include '../includes/header.php'; ?>
+        
+        <main class="main-content">
     <div class="container">
         <?php if ($error): ?>
             <div class="alert alert-error">❌ <?= htmlspecialchars($error) ?></div>
@@ -142,7 +147,7 @@ function getNombreReferencia($array, $id, $campo = 'nombre') {
                     </strong>
                 </p>
                 <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
-                    <a href="gestionar_pacientes_completo.php?id=<?= $paciente['id_paciente'] ?>" class="btn btn-success">
+                    <a href="gestionar_pacientes.php?id=<?= $paciente['id_paciente'] ?>" class="btn btn-success">
                         ✏️ Editar Información
                     </a>
                     <a href="historias_clinicas.php?paciente=<?= $paciente['id_paciente'] ?>" class="btn btn-primary">
@@ -435,6 +440,8 @@ function getNombreReferencia($array, $id, $campo = 'nombre') {
                 <?php endif; ?>
             </div>
         <?php endif; ?>
+    </div>
+        </main>
     </div>
 </body>
 </html>

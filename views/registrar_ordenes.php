@@ -182,6 +182,11 @@ if ($_POST) {
     </style>
 </head>
 <body>
+    <div class="dashboard-container">
+        <?php include '../includes/sidebar.php'; ?>
+        <?php include '../includes/header.php'; ?>
+        
+        <main class="main-content">
     <div class="container">
         <div class="card card-gradient text-center mb-4">
             <h1>💊 Órdenes Médicas y Plan de Manejo</h1>
@@ -403,5 +408,7 @@ if ($_POST) {
         agregarMedicamento();
         agregarProcedimiento();
     </script>
+        </main>
+    </div>
 </body>
 </html>

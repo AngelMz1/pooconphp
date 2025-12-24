@@ -47,6 +47,11 @@ try {
     <link rel="stylesheet" href="../assets/css/styles.css">
 </head>
 <body>
+    <div class="dashboard-container">
+        <?php include '../includes/sidebar.php'; ?>
+        <?php include '../includes/header.php'; ?>
+        
+        <main class="main-content">
     <div class="container">
         <?php if ($error): ?>
             <div class="alert alert-error">❌ <?= htmlspecialchars($error) ?></div>
@@ -303,6 +308,8 @@ try {
                 <?php endif; ?>
             </div>
         <?php endif; ?>
+    </div>
+        </main>
     </div>
 </body>
 </html>

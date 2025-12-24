@@ -36,9 +36,11 @@ class HistoriaClinica
                 'observaciones' => $this->validator->sanitize($datos['observaciones'] ?? '')
             ];
 
-            // Si se proporciona fecha de ingreso personalizada
+            // Si se proporciona fecha de ingreso personalizada, usarla. Si no, usar fecha actual.
             if (!empty($datos['fecha_ingreso'])) {
                 $historiaData['fecha_ingreso'] = $datos['fecha_ingreso'];
+            } else {
+                $historiaData['fecha_ingreso'] = date('Y-m-d H:i:s');
             }
 
             // Si se proporciona fecha de egreso

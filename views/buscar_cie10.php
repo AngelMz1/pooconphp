@@ -59,6 +59,11 @@ if (isset($_GET['buscar']) && !empty($_GET['buscar'])) {
     </style>
 </head>
 <body>
+    <div class="dashboard-container">
+        <?php include '../includes/sidebar.php'; ?>
+        <?php include '../includes/header.php'; ?>
+        
+        <main class="main-content">
     <div class="container">
         <div class="card card-gradient text-center mb-4">
             <h1>🔍 Buscador CIE-10</h1>
@@ -174,5 +179,7 @@ if (isset($_GET['buscar']) && !empty($_GET['buscar'])) {
             }
         });
     </script>
+        </main>
+    </div>
 </body>
 </html>
