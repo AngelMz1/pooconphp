@@ -145,13 +145,13 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' &
                 $nuevo_paciente_data = [
                     'documento_id' => $_POST['documento_id'],
                     'primer_nombre' => $_POST['primer_nombre'],
-                    'segundo_nombre' => $_POST['segundo_nombre'] ?? '',
+                    'segundo_nombre' => !empty($_POST['segundo_nombre']) ? $_POST['segundo_nombre'] : null,
                     'primer_apellido' => $_POST['primer_apellido'],
-                    'segundo_apellido' => $_POST['segundo_apellido'] ?? '',
-                    'fecha_nacimiento' => $_POST['fecha_nacimiento'],
+                    'segundo_apellido' => !empty($_POST['segundo_apellido']) ? $_POST['segundo_apellido'] : null,
+                    'fecha_nacimiento' => !empty($_POST['fecha_nacimiento']) ? $_POST['fecha_nacimiento'] : null,
                     'sexo_id' => (int)$_POST['sexo_id'],
-                    'telefono' => $_POST['telefono'] ?? '',
-                    'direccion' => $_POST['direccion'] ?? '',
+                    'telefono' => !empty($_POST['telefono']) ? $_POST['telefono'] : null,
+                    'direccion' => !empty($_POST['direccion']) ? $_POST['direccion'] : null,
                     'eps_id' => (int)$_POST['eps_id'],
                     'regimen_id' => (int)$_POST['regimen_id'],
                     'ciudad_id' => !empty($_POST['ciudad_id']) ? (int)$_POST['ciudad_id'] : null,
@@ -160,6 +160,11 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' &
                     'lugar_nacimiento' => !empty($_POST['lugar_nacimiento']) ? (int)$_POST['lugar_nacimiento'] : null,
                     'estrato' => !empty($_POST['estrato']) ? (int)$_POST['estrato'] : null
                 ];
+                
+                // Filtrar valores null antes de insertar
+                $nuevo_paciente_data = array_filter($nuevo_paciente_data, function($value) {
+                    return $value !== null;
+                });
                 
                 $nuevo_paciente = $supabase->insert('pacientes', $nuevo_paciente_data);
                 $id_paciente = $nuevo_paciente[0]['id_paciente'];

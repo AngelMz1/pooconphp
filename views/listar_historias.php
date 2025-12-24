@@ -139,7 +139,13 @@ try {
                                     </td>
                                     <td>
                                         <a href="ver_paciente.php?id=<?= $h['id_paciente'] ?>" class="badge badge-primary">
-                                            <?= htmlspecialchars($h['pacientes']['primer_nombre'] . ' ' . $h['pacientes']['primer_apellido']) ?>
+                                            <?php 
+                                            if (isset($h['pacientes']) && is_array($h['pacientes'])) {
+                                                echo htmlspecialchars(($h['pacientes']['primer_nombre'] ?? '') . ' ' . ($h['pacientes']['primer_apellido'] ?? ''));
+                                            } else {
+                                                echo 'Paciente #' . htmlspecialchars($h['id_paciente']);
+                                            }
+                                            ?>
                                         </a>
                                     </td>
                                     <td>
@@ -149,9 +155,10 @@ try {
                                         ?>
                                     </td>
                                     <td>
-                                        <span title="<?= htmlspecialchars($h['motivo_consulta']) ?>">
-                                            <?= htmlspecialchars(substr($h['motivo_consulta'], 0, 60)) ?>
-                                            <?= strlen($h['motivo_consulta']) > 60 ? '...' : '' ?>
+                                        <?php $motivoConsulta = $h['motivo_consulta'] ?? ''; ?>
+                                        <span title="<?= htmlspecialchars($motivoConsulta) ?>">
+                                            <?= htmlspecialchars(substr($motivoConsulta, 0, 60)) ?>
+                                            <?= strlen($motivoConsulta) > 60 ? '...' : '' ?>
                                         </span>
                                     </td>
                                     <td>
@@ -174,6 +181,9 @@ try {
                                     <td>
                                         <a href="ver_historia.php?id=<?= $h['id_historia'] ?>" class="btn btn-sm btn-primary">
                                             📄 Ver
+                                        </a>
+                                        <a href="imprimir_historia.php?id=<?= $h['id_historia'] ?>" class="btn btn-sm btn-success" target="_blank" title="Imprimir">
+                                            🖨️
                                         </a>
                                     </td>
                                 </tr>
@@ -218,19 +228,25 @@ try {
                 }
 
                 tbody.innerHTML = items.map(h => {
-                    const motivoCorto = h.motivo_consulta.length > 60 
-                        ? h.motivo_consulta.substring(0, 60) + '...' 
-                        : h.motivo_consulta;
+                    const motivoConsulta = h.motivo_consulta || '';
+                    const motivoCorto = motivoConsulta.length > 60 
+                        ? motivoConsulta.substring(0, 60) + '...' 
+                        : motivoConsulta;
                     
-                    const diagnosticoHTML = h.diagnostico 
-                        ? (h.diagnostico.length > 40 
-                            ? h.diagnostico.substring(0, 40) + '...' 
-                            : h.diagnostico)
+                    const diagnostico = h.diagnostico || '';
+                    const diagnosticoHTML = diagnostico 
+                        ? (diagnostico.length > 40 
+                            ? diagnostico.substring(0, 40) + '...' 
+                            : diagnostico)
                         : '<span style="color: var(--gray-500);">Sin diagnóstico</span>';
                     
                     const estadoBadge = h.fecha_egreso 
                         ? '<span class="badge badge-success">✓ Cerrada</span>'
                         : '<span class="badge badge-primary">● Activa</span>';
+                    
+                    const nombrePaciente = h.pacientes 
+                        ? ((h.pacientes.primer_nombre || '') + ' ' + (h.pacientes.primer_apellido || '')).trim()
+                        : 'Paciente #' + h.id_paciente;
 
                     return `
                         <tr>
@@ -241,16 +257,19 @@ try {
                             </td>
                             <td>
                                 <a href="ver_paciente.php?id=${h.id_paciente}" class="badge badge-primary">
-                                    ${h.pacientes ? (h.pacientes.primer_nombre + ' ' + h.pacientes.primer_apellido) : 'Paciente #' + h.id_paciente}
+                                    ${nombrePaciente}
                                 </a>
                             </td>
                             <td>${formatFecha(h.fecha_ingreso)}</td>
-                            <td><span title="${h.motivo_consulta}">${motivoCorto}</span></td>
+                            <td><span title="${motivoConsulta}">${motivoCorto || '<span style="color: var(--gray-500);">-</span>'}</span></td>
                             <td>${diagnosticoHTML}</td>
                             <td>${estadoBadge}</td>
                             <td>
                                 <a href="ver_historia.php?id=${h.id_historia}" class="btn btn-sm btn-primary">
                                     📄 Ver
+                                </a>
+                                <a href="imprimir_historia.php?id=${h.id_historia}" class="btn btn-sm btn-success" target="_blank" title="Imprimir">
+                                    🖨️
                                 </a>
                             </td>
                         </tr>

@@ -237,6 +237,11 @@ try {
                 <?php endif; ?>
 
                 <div class="flex gap-2 flex-wrap items-center">
+                    <!-- Botón de impresión siempre visible -->
+                    <a href="imprimir_historia.php?id=<?= $historia['id_historia'] ?>" class="btn btn-success" target="_blank">
+                        🖨️ Imprimir Historia
+                    </a>
+                    
                     <?php if (!$historia['fecha_egreso']): ?>
                         <a href="registrar_examen.php?id=<?= $historia['id_historia'] ?>" class="btn btn-primary">
                             👨‍⚕️ Registrar Examen Físico

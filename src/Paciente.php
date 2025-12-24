@@ -147,9 +147,53 @@ class Paciente
     {
         $sanitizados = [];
         
+        // Campos que deben ser NULL si están vacíos (campos de fecha y opcionales)
+        $camposNullSiVacio = [
+            'fecha_nacimiento', 
+            'segundo_nombre', 
+            'segundo_apellido',
+            'telefono',
+            'email',
+            'direccion',
+            'estrato',
+            'sexo_id',
+            'eps_id',
+            'regimen_id',
+            'ciudad_id',
+            'barrio_id',
+            'etnia_id',
+            'escolaridad_id',
+            'gs_rh_id',
+            'estado_civil_id',
+            'acudiente_id',
+            'lugar_nacimiento',
+            'ocupacion',
+            'empresa',
+            'grupo_poblacional'
+        ];
+        
         foreach ($datos as $key => $value) {
+            // Si el valor es null, no incluirlo
+            if ($value === null) {
+                continue;
+            }
+            
+            // Si es un campo que debe ser null cuando está vacío
+            if (in_array($key, $camposNullSiVacio)) {
+                if ($value === '' || $value === '0' && !in_array($key, ['estrato'])) {
+                    // No incluir en el array para que no se envíe
+                    continue;
+                }
+            }
+            
+            // Sanitizar strings
             if (is_string($value)) {
-                $sanitizados[$key] = $this->validator->sanitize($value);
+                // Si después de trim está vacío y es un campo nullable, no incluirlo
+                $trimmed = trim($value);
+                if ($trimmed === '' && in_array($key, $camposNullSiVacio)) {
+                    continue;
+                }
+                $sanitizados[$key] = $this->validator->sanitize($trimmed);
             } else {
                 $sanitizados[$key] = $value;
             }

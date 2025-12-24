@@ -466,7 +466,6 @@ td b {
     color: #000000;
     font-weight: 700;
 }
-}
 
 tr:hover {
     background: var(--gray-100);
