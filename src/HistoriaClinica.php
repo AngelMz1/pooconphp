@@ -30,7 +30,6 @@ class HistoriaClinica
             // Preparar datos para insertar (SIN motivo_consulta - ese campo está en tabla consultas)
             $historiaData = [
                 'id_paciente' => $datos['id_paciente'],
-                'fecha_ingreso' => date('c'), // Usar formato ISO 8601 para Supabase
                 'analisis_plan' => $this->validator->sanitize($datos['analisis_plan'] ?? ''),
                 'diagnostico' => $this->validator->sanitize($datos['diagnostico'] ?? ''),
                 'tratamiento' => $this->validator->sanitize($datos['tratamiento'] ?? ''),
