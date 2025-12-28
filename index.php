@@ -1,3 +1,41 @@
+<?php
+require_once 'vendor/autoload.php';
+require_once 'includes/auth_helper.php';
+
+// Proteger Dashboard
+requireLogin();
+
+use App\SupabaseClient;
+use App\Models\Paciente;
+use App\Models\HistoriaClinica; // Asumiendo que existe o se usará genericamente
+use Dotenv\Dotenv;
+
+// Inicializar variables
+$totalPacientes = 0;
+$totalHistorias = 0;
+
+try {
+    $dotenv = Dotenv::createImmutable(__DIR__);
+    $dotenv->load();
+    
+    // Verificar configuración
+    if (isset($_ENV['SUPABASE_URL']) && isset($_ENV['SUPABASE_KEY'])) {
+        $supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
+        
+        // Obtener estadísticas si las clases existen
+        // Simplificación para no romper si no existen los modelos perfectos aun
+        if (class_exists('App\Models\Paciente')) {
+             $paciente = new Paciente($supabase);
+             $totalPacientes = $paciente->contarTotal();
+        }
+        
+        // Count manual si no hay modelo historia
+        // $totalHistorias = ...
+    }
+} catch (Exception $e) {
+    // Silenciar errores de configuración por ahora
+}
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -5,7 +43,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>POO con PHP - Sistema de Gestión Médica</title>
     <link rel="stylesheet" href="assets/css/styles.css">
-</head>
 </head>
 <body>
     <div class="dashboard-container">
@@ -17,41 +54,6 @@
         
         <!-- Main Content -->
         <main class="main-content">
-            <?php
-            require_once 'vendor/autoload.php';
-            
-            use App\SupabaseClient;
-            use App\Paciente;
-            use App\HistoriaClinica;
-            use Dotenv\Dotenv;
-            
-            // Inicializar variables
-            $totalPacientes = 0;
-            $totalHistorias = 0;
-            
-            try {
-                $dotenv = Dotenv::createImmutable(__DIR__);
-                $dotenv->load();
-                
-                // Verificar configuración
-                if (isset($_ENV['SUPABASE_URL']) && isset($_ENV['SUPABASE_KEY'])) {
-                    $supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
-                    $paciente = new Paciente($supabase);
-                    $historiaClinica = new HistoriaClinica($supabase);
-                    
-                    // Obtener estadísticas
-                    try {
-                        $totalPacientes = $paciente->contarTotal();
-                        $totalHistorias = $historiaClinica->contarTotal();
-                    } catch (Exception $e) {
-                        // Silenciar errores de estadísticas
-                    }
-                }
-            } catch (Exception $e) {
-                // Silenciar errores de configuración
-            }
-            ?>
-            
             <div class="container">
                 <!-- Header -->
                 <div class="card card-gradient text-center mb-4 fade-in" style="background: linear-gradient(135deg, #1e293b, #334155);">
