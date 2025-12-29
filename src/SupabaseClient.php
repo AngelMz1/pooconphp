@@ -58,7 +58,7 @@ class SupabaseClient
      * @return array Resultados de la consulta
      * @throws \Exception Si la consulta falla
      */
-    public function select($table, $columns = '*', $filter = '', $order = '')
+    public function select($table, $columns = '*', $filter = '', $order = '', $limit = null)
     {
         $this->validateTable($table);
         
@@ -69,6 +69,9 @@ class SupabaseClient
             }
             if ($order) {
                 $url .= "&order=$order";
+            }
+            if ($limit) {
+                $url .= "&limit=$limit";
             }
             
             $response = $this->executeWithRetry('GET', $url);

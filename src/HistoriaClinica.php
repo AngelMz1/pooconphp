@@ -5,16 +5,14 @@ namespace App;
 use App\SupabaseClient;
 use App\Validator;
 
-class HistoriaClinica
-{
-    private $supabase;
-    private $validator;
+use App\BaseModel;
 
-    public function __construct(SupabaseClient $supabase)
-    {
-        $this->supabase = $supabase;
-        $this->validator = new Validator();
-    }
+/**
+ * Clase para gestionar historias clínicas
+ */
+class HistoriaClinica extends BaseModel
+{
+    // Constructor inherited
 
     /**
      * Crear nueva historia clínica con validación
@@ -33,7 +31,8 @@ class HistoriaClinica
                 'analisis_plan' => $this->validator->sanitize($datos['analisis_plan'] ?? ''),
                 'diagnostico' => $this->validator->sanitize($datos['diagnostico'] ?? ''),
                 'tratamiento' => $this->validator->sanitize($datos['tratamiento'] ?? ''),
-                'observaciones' => $this->validator->sanitize($datos['observaciones'] ?? '')
+                'observaciones' => $this->validator->sanitize($datos['observaciones'] ?? ''),
+                'id_consulta' => isset($datos['id_consulta']) ? (int)$datos['id_consulta'] : null
             ];
 
             // Si se proporciona fecha de ingreso personalizada, usarla. Si no, usar fecha actual.

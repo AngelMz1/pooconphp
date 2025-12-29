@@ -5,16 +5,11 @@ namespace App;
 use App\SupabaseClient;
 use App\Validator;
 
-class Paciente
-{
-    private $supabase;
-    private $validator;
+use App\BaseModel;
 
-    public function __construct(SupabaseClient $supabase)
-    {
-        $this->supabase = $supabase;
-        $this->validator = new Validator();
-    }
+class Paciente extends BaseModel
+{
+    // Constructor inherited
 
     /**
      * Obtener todos los pacientes ordenados por nombre

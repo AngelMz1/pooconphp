@@ -8,16 +8,11 @@ use App\Validator;
 /**
  * Clase para gestionar consultas médicas
  */
-class Consulta
-{
-    private $supabase;
-    private $validator;
+use App\BaseModel;
 
-    public function __construct(SupabaseClient $supabase)
-    {
-        $this->supabase = $supabase;
-        $this->validator = new Validator();
-    }
+class Consulta extends BaseModel
+{
+    // Constructor inherited
 
     /**
      * Crear nueva consulta médica
@@ -29,7 +24,8 @@ class Consulta
                 'id_paciente' => (int)$datos['id_paciente'],
                 'medico_id' => (int)$datos['medico_id'],
                 'motivo_consulta' => $this->validator->sanitize($datos['motivo_consulta']),
-                'enfermedad_actual' => $this->validator->sanitize($datos['enfermedad_actual'])
+                'enfermedad_actual' => $this->validator->sanitize($datos['enfermedad_actual']),
+                'estado' => 'pendiente'
             ];
 
             $resultado = $this->supabase->insert('consultas', $consultaData);
@@ -61,6 +57,40 @@ class Consulta
             return $this->supabase->select('consultas', '*', "id_paciente=eq.$id_paciente", 'id_consulta.desc');
         } catch (\Exception $e) {
             throw new \Exception("Error al obtener consultas del paciente: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Obtener consultas pendientes por médico
+     */
+    public function obtenerPendientesPorMedico($medico_id)
+    {
+        try {
+            return $this->supabase->select(
+                'consultas', 
+                '*, pacientes:id_paciente(primer_nombre, primer_apellido, documento_id)', 
+                "medico_id=eq.$medico_id&estado=eq.pendiente", 
+                'id_consulta.asc'
+            );
+        } catch (\Exception $e) {
+            throw new \Exception("Error al obtener consultas pendientes: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Cambiar estado de la consulta
+     */
+    public function cambiarEstado($id, $estado)
+    {
+        $estadosPermitidos = ['pendiente', 'en_proceso', 'finalizada'];
+        if (!in_array($estado, $estadosPermitidos)) {
+            throw new \Exception("Estado no válido");
+        }
+
+        try {
+            return $this->supabase->update('consultas', ['estado' => $estado], "id_consulta=eq.$id");
+        } catch (\Exception $e) {
+            throw new \Exception("Error al actualizar estado: " . $e->getMessage());
         }
     }
 

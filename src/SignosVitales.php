@@ -8,16 +8,14 @@ use App\Validator;
 /**
  * Clase para gestionar signos vitales
  */
-class SignosVitales
-{
-    private $supabase;
-    private $validator;
+use App\BaseModel;
 
-    public function __construct(SupabaseClient $supabase)
-    {
-        $this->supabase = $supabase;
-        $this->validator = new Validator();
-    }
+/**
+ * Clase para gestionar signos vitales
+ */
+class SignosVitales extends BaseModel
+{
+    // Constructor inherited
 
     /**
      * Crear registro de signos vitales

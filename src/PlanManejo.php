@@ -8,16 +8,14 @@ use App\Validator;
 /**
  * Clase para gestionar plan de manejo
  */
-class PlanManejo
-{
-    private $supabase;
-    private $validator;
+use App\BaseModel;
 
-    public function __construct(SupabaseClient $supabase)
-    {
-        $this->supabase = $supabase;
-        $this->validator = new Validator();
-    }
+/**
+ * Clase para gestionar plan de manejo
+ */
+class PlanManejo extends BaseModel
+{
+    // Constructor inherited
 
     /**
      * Crear plan de manejo

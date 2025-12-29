@@ -8,16 +8,14 @@ use App\Validator;
 /**
  * Clase para gestionar procedimientos y solicitudes
  */
-class Procedimiento
-{
-    private $supabase;
-    private $validator;
+use App\BaseModel;
 
-    public function __construct(SupabaseClient $supabase)
-    {
-        $this->supabase = $supabase;
-        $this->validator = new Validator();
-    }
+/**
+ * Clase para gestionar procedimientos y solicitudes
+ */
+class Procedimiento extends BaseModel
+{
+    // Constructor inherited
 
     /**
      * Crear orden de procedimiento/examen

@@ -4,20 +4,14 @@ namespace App;
 
 use App\SupabaseClient;
 use App\Validator;
+use App\BaseModel;
 
 /**
  * Clase para gestionar médicos del sistema
  */
-class Medico
+class Medico extends BaseModel
 {
-    private $supabase;
-    private $validator;
-
-    public function __construct(SupabaseClient $supabase)
-    {
-        $this->supabase = $supabase;
-        $this->validator = new Validator();
-    }
+    // Constructor inherited from BaseModel
 
     /**
      * Obtener todos los médicos
@@ -53,6 +47,19 @@ class Medico
             return $this->supabase->select('medicos', '*', "especialidad_id=eq.$especialidad_id", 'primer_apellido.asc');
         } catch (\Exception $e) {
             throw new \Exception("Error al obtener médicos por especialidad: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Obtener médico por ID de usuario (Login)
+     */
+    public function obtenerPorUserId($user_id)
+    {
+        try {
+            $resultado = $this->supabase->select('medicos', '*', "user_id=eq.$user_id");
+            return !empty($resultado) ? $resultado[0] : null;
+        } catch (\Exception $e) {
+            throw new \Exception("Error al obtener médico por usuario: " . $e->getMessage());
         }
     }
 
@@ -109,6 +116,9 @@ class Medico
             }
             if (!empty($datos['especialidad_id'])) {
                 $medicoData['especialidad_id'] = (int)$datos['especialidad_id'];
+            }
+            if (!empty($datos['user_id'])) {
+                $medicoData['user_id'] = (int)$datos['user_id'];
             }
 
             $resultado = $this->supabase->insert('medicos', $medicoData);

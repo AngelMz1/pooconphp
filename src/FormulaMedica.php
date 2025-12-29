@@ -8,16 +8,14 @@ use App\Validator;
 /**
  * Clase para gestionar fórmulas médicas
  */
-class FormulaMedica
-{
-    private $supabase;
-    private $validator;
+use App\BaseModel;
 
-    public function __construct(SupabaseClient $supabase)
-    {
-        $this->supabase = $supabase;
-        $this->validator = new Validator();
-    }
+/**
+ * Clase para gestionar fórmulas médicas
+ */
+class FormulaMedica extends BaseModel
+{
+    // Constructor inherited
 
     /**
      * Crear encabezado de fórmula médica
