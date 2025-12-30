@@ -1,15 +1,32 @@
 <?php
 require_once '../vendor/autoload.php';
+require_once '../includes/auth_helper.php';
+
+session_start();
+requireLogin();
 
 use App\SupabaseClient;
 use App\Paciente;
 use Dotenv\Dotenv;
 
 $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->load();
+try {
+    $dotenv->safeLoad();
+} catch (Exception $e) { }
 
-$supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
-$pacienteModel = new Paciente($supabase);
+$url = $_ENV['SUPABASE_URL'] ?? $_SERVER['SUPABASE_URL'] ?? getenv('SUPABASE_URL');
+$key = $_ENV['SUPABASE_KEY'] ?? $_SERVER['SUPABASE_KEY'] ?? getenv('SUPABASE_KEY');
+
+$supabase = null;
+$pacienteModel = null;
+
+if ($url && $key) {
+    $supabase = new SupabaseClient($url, $key);
+    $pacienteModel = new Paciente($supabase);
+} else {
+    // If no connection, we can't do much, but we shouldn't crash with 500.
+    // We will handle this in the try-catch below by checking if model is null.
+}
 
 // Procesamiento de búsqueda y filtros
 $busqueda = $_GET['buscar'] ?? '';
@@ -18,6 +35,10 @@ $pacientes = [];
 $error = '';
 
 try {
+    if (!$pacienteModel) {
+        throw new Exception("Error de conexión a base de datos. Verifique configuración.");
+    }
+
     if (!empty($busqueda)) {
         $pacientes = $pacienteModel->buscarPorNombre($busqueda);
     } elseif (!empty($filtroEstrato)) {

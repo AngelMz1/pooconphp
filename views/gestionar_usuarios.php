@@ -16,35 +16,51 @@ $msg = '';
 $error = '';
 
 // --- Crear Usuario ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'crear') {
-    $username = trim($_POST['username']);
-    $nombre = trim($_POST['nombre_completo']);
-    $rol = $_POST['rol'];
-    $password = $_POST['password'];
-    
-    if (strlen($password) < 4) {
-        $error = "La contraseña debe tener al menos 4 caracteres.";
-    } else {
-        $data = [
-            'username' => $username,
-            'nombre_completo' => $nombre,
-            'rol' => $rol,
-            'password_hash' => password_hash($password, PASSWORD_DEFAULT),
-            'active' => true
-        ];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    if ($_POST['action'] === 'crear') {
+        $username = trim($_POST['username']);
+        $nombre = trim($_POST['nombre_completo']);
+        $rol = $_POST['rol'];
+        $password = $_POST['password'];
         
-        try {
-            // Intentar insertar
-            $result = $supabase->insert('users', $data);
+        if (strlen($password) < 4) {
+            $error = "La contraseña debe tener al menos 4 caracteres.";
+        } else {
+            $data = [
+                'username' => $username,
+                'nombre_completo' => $nombre,
+                'rol' => $rol,
+                'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+                'active' => true
+            ];
             
-            if (isset($result['error'])) {
-                 $error = "Error al crear usuario (¿Usuario duplicado?).";
-            } else {
-                 header("Location: gestionar_usuarios.php?msg=Usuario Creado");
-                 exit;
+            try {
+                $result = $supabase->insert('users', $data);
+                if (isset($result['error'])) {
+                     $error = "Error al crear usuario (¿Usuario duplicado?).";
+                } else {
+                     header("Location: gestionar_usuarios.php?msg=Usuario Creado");
+                     exit;
+                }
+            } catch (Exception $e) {
+                $error = "Error sistema: " . $e->getMessage();
             }
-        } catch (Exception $e) {
-            $error = "Error sistema: " . $e->getMessage();
+        }
+    } elseif ($_POST['action'] === 'reset_password') {
+        $userId = $_POST['user_id'];
+        $newPass = $_POST['new_password'];
+        
+        if (strlen($newPass) < 4) {
+            $error = "La contraseña nueva es muy corta.";
+        } else {
+            try {
+                $hash = password_hash($newPass, PASSWORD_DEFAULT);
+                $supabase->update('users', ['password_hash' => $hash], "id=eq.$userId");
+                header("Location: gestionar_usuarios.php?msg=Contraseña Actualizada");
+                exit;
+            } catch (Exception $e) {
+                $error = "Error al actualizar contraseña: " . $e->getMessage();
+            }
         }
     }
 }
@@ -128,7 +144,7 @@ if (isset($_GET['msg'])) $msg = $_GET['msg'];
                         </thead>
                         <tbody>
                             <?php if(empty($usuarios)): ?>
-                                <tr><td colspan="5" class="text-center">No hay usuarios.</td></tr>
+                                <tr><td colspan="6" class="text-center">No hay usuarios.</td></tr>
                             <?php else: ?>
                                 <?php foreach($usuarios as $u): ?>
                                     <tr>
@@ -141,6 +157,11 @@ if (isset($_GET['msg'])) $msg = $_GET['msg'];
                                         </td>
                                         <td><?= isset($u['active']) && $u['active'] ? 'Activo' : 'Inactivo' ?></td>
                                         <td><?= date('d/m/Y', strtotime($u['created_at'])) ?></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-warning" onclick="abrirResetPassword(<?= $u['id'] ?>, '<?= htmlspecialchars($u['username']) ?>')">
+                                                🔑 Cambiar Clave
+                                            </button>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>
@@ -148,6 +169,36 @@ if (isset($_GET['msg'])) $msg = $_GET['msg'];
                     </table>
                 </div>
             </div>
+
+            <!-- Modal simple para cambio de password (simulado con div fixed) -->
+            <div id="modal-password" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+                <div style="background:white; padding:2rem; border-radius:8px; width:400px; max-width:90%;">
+                    <h3>Cambiar Contraseña</h3>
+                    <p>Usuario: <strong id="modal-username"></strong></p>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="reset_password">
+                        <input type="hidden" name="user_id" id="modal-userid">
+                        
+                        <div class="form-group">
+                            <label>Nueva Contraseña</label>
+                            <input type="password" name="new_password" required placeholder="Nueva contraseña" class="form-control">
+                        </div>
+                        
+                        <div class="flex gap-2 justify-end mt-4">
+                            <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-password').style.display='none'">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Guardar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <script>
+                function abrirResetPassword(id, username) {
+                    document.getElementById('modal-userid').value = id;
+                    document.getElementById('modal-username').textContent = username;
+                    document.getElementById('modal-password').style.display = 'flex';
+                }
+            </script>
         </div>
     </main>
 </body>

@@ -32,9 +32,12 @@ class FormulaMedica extends BaseModel
                 $formulaData['vigencia_dias'] = (int)$datos['vigencia_dias'];
             }
             
+            /* 
             if (!empty($datos['recomendaciones'])) {
-                $formulaData['recomendaciones'] = $this->validator->sanitize($datos['recomendaciones']);
-            }
+                // Column does not exist in DB schema. Ignoring to prevent 400 error.
+                // $formulaData['recomendaciones'] = $this->validator->sanitize($datos['recomendaciones']);
+            } 
+            */
 
             $resultado = $this->supabase->insert('formulas_medicas', $formulaData);
             return $resultado;

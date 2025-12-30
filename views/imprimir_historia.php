@@ -4,6 +4,10 @@
  * Formato optimizado para impresión en papel carta
  */
 require_once '../vendor/autoload.php';
+require_once '../includes/auth_helper.php';
+
+session_start();
+requireLogin();
 
 use App\SupabaseClient;
 use App\HistoriaClinica;

@@ -247,6 +247,17 @@ try {
                         🖨️ Imprimir Historia
                     </a>
                     
+                    <!-- Botones siempre visibles (Impresión y Facturación) -->
+                    <a href="imprimir_formula.php?id_historia=<?= $historia['id_historia'] ?>" class="btn btn-outline" target="_blank">
+                        💊 Imprimir Fórmula
+                    </a>
+                    <a href="imprimir_solicitud.php?id_historia=<?= $historia['id_historia'] ?>" class="btn btn-outline" target="_blank">
+                        🔬 Imprimir Ordenes
+                    </a>
+                    <a href="facturar_paciente.php?paciente_id=<?= $historia['id_paciente'] ?>&consulta_id=<?= $historia['id_consulta'] ?? '' ?>" class="btn btn-warning">
+                        💰 Facturar
+                    </a>
+
                     <?php if (!$historia['fecha_egreso']): ?>
                         <a href="registrar_examen.php?id=<?= $historia['id_historia'] ?>" class="btn btn-primary">
                             👨‍⚕️ Registrar Examen Físico
@@ -262,13 +273,6 @@ try {
                                 🔒 Cerrar Historia
                             </button>
                         </form>
-                    <?php else: ?>
-                        <button class="btn btn-secondary" disabled style="opacity: 0.6; cursor: not-allowed;">
-                            👨‍⚕️ Registrar Examen Físico (Deshabilitado)
-                        </button>
-                        <button class="btn btn-secondary" disabled style="opacity: 0.6; cursor: not-allowed;">
-                            💊 Recetar / Órdenes (Deshabilitado)
-                        </button>
                     <?php endif; ?>
 
                     <a href="listar_historias.php" class="btn btn-secondary">

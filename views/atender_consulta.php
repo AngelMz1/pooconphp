@@ -33,10 +33,52 @@ foreach ($medicamentosList as $med) {
 }
 
 $id_consulta = $_GET['id'] ?? null;
-$mensaje = '';
-$error = '';
+$cita_id = $_GET['cita_id'] ?? null;
 
-if (!$id_consulta) {
+if ($cita_id && !$id_consulta) {
+    // Si venimos desde el calendario con un ID de cita (Appointment)
+    // 1. Obtener datos de la cita
+    try {
+        $citas = $supabase->select('citas', '*', "id=eq.$cita_id");
+        if (!empty($citas)) {
+            $cita = $citas[0];
+            
+            // 2. Buscar si ya existe una consulta PENDIENTE para este paciente/medico
+            // Idealmente deberíamos tener un link directo, pero lo inferimos.
+            $cons = $supabase->select('consultas', '*', "id_paciente=eq.{$cita['paciente_id']}&medico_id=eq.{$cita['medico_id']}&estado=eq.pendiente");
+            
+            if (!empty($cons)) {
+                // Ya existe, usamos esa
+                $id_consulta = $cons[0]['id_consulta'];
+            } else {
+                // 3. No existe, creamos una nueva consulta automáticamente
+                $datosNueva = [
+                    'id_paciente' => $cita['paciente_id'],
+                    'medico_id' => $cita['medico_id'],
+                    'motivo_consulta' => $cita['motivo_consulta'],
+                    'enfermedad_actual' => 'Generado desde Cita #' . $cita_id,
+                    'estado' => 'pendiente'
+                ];
+                
+                try {
+                    $nuevo = $consultaModel->crear($datosNueva);
+                    if (!empty($nuevo) && isset($nuevo[0]['id_consulta'])) {
+                        $id_consulta = $nuevo[0]['id_consulta'];
+                    } else {
+                        throw new Exception("Error al crear consulta automática.");
+                    }
+                } catch (Exception $e) {
+                    die("Error creando consulta: " . $e->getMessage());
+                }
+            }
+        }
+    } catch (Exception $e) {
+        die("Error al procesar la cita: " . $e->getMessage());
+    }
+}
+
+// Logic continues...
+if (!$id_consulta && !$cita_id) {
     header("Location: ../index.php");
     exit;
 }
@@ -84,19 +126,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              });
 
              if (!empty($medicamentosValidos)) {
-                 $datosFormula = [
-                     'id_historia' => $id_historia,
-                     'tipo_formula' => $_POST['tipo_formula'] ?? 'Ambulatoria',
-                     'vigencia_dias' => $_POST['vigencia_dias'] ?? 30,
-                     'recomendaciones' => $_POST['recomendaciones_formula'] ?? ''
-                 ];
+                 // Nota: formulas_medicas es una tabla de items. No hay header.
+                 // Ignoramos recomendaciones y vigencia por ahora (no soportado en schema actual)
                  
-                 $resFormula = $formulaModel->crear($datosFormula);
-                 $id_formula = $resFormula[0]['id_formula'];
-
                  foreach ($medicamentosValidos as $med) {
                      $formulaModel->agregarMedicamento([
-                        'id_formula' => $id_formula,
                         'id_historia' => $id_historia,
                         'medicamento_id' => $med['id_medicamento'],
                         'dosis' => $med['dosis'],
@@ -119,7 +153,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             foreach ($procsValidos as $proc) {
                 $procModel->crear([
                     'id_historia' => $id_historia,
-                    'codigo_cups' => $proc['codigo'],
+                    'id_consulta' => $id_consulta, // REQUIRED for solicitudes table
+                    'codigo_cups' => $proc['codigo'], // Used to lookup ID
                     'nombre_procedimiento' => $proc['nombre'],
                     'cantidad' => $proc['cantidad'] ?? 1,
                     'justificacion' => $_POST['justificacion_proc'] ?? ''
@@ -143,9 +178,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // 5. Cerrar Consulta
         $consultaModel->cambiarEstado($id_consulta, 'finalizada');
         
-        // 6. Redirigir
-        header("Location: ../index.php?msg=Consulta Finalizada Exitosamente");
+        // 6. Mostrar mensaje de éxito y opciones
+        ?>
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <title>Consulta Finalizada</title>
+            <link rel="stylesheet" href="../assets/css/styles.css">
+        </head>
+        <body class="dashboard-container">
+            <?php include '../includes/sidebar.php'; ?>
+            <?php include '../includes/header.php'; ?>
+            
+            <main class="main-content">
+                <div class="container text-center">
+                    <div class="card fade-in" style="max-width: 800px; margin: 2rem auto;">
+                        <h1 style="color: var(--success);">✅ Consulta Finalizada con Éxito</h1>
+                        <p class="big-text">La historia clínica del paciente ha sido guardada.</p>
+                        
+                        <div class="grid grid-2 mt-4 mb-4">
+                            <div>
+                                <strong>Paciente:</strong><br>
+                                <?= htmlspecialchars($paciente['primer_nombre'] . ' ' . $paciente['primer_apellido']) ?>
+                            </div>
+                            <div>
+                                <strong>ID Consulta:</strong><br>
+                                #<?= $id_consulta ?>
+                            </div>
+                        </div>
+
+                        <h3>📂 Documentos Generados</h3>
+                        <div class="flex gap-2 justify-center flex-wrap mt-2">
+                             <a href="imprimir_historia.php?id=<?= $id_historia ?>" class="btn btn-success btn-lg" target="_blank">
+                                🖨️ Imprimir Historia
+                             </a>
+                             <a href="imprimir_formula.php?id_historia=<?= $id_historia ?>" class="btn btn-primary btn-lg" target="_blank">
+                                💊 Imprimir Fórmula
+                             </a>
+                             <a href="imprimir_solicitud.php?id_historia=<?= $id_historia ?>" class="btn btn-outline btn-lg" target="_blank">
+                                🔬 Imprimir Órdenes
+                             </a>
+                        </div>
+                        
+                        <div style="margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #eee;">
+                            <h3>🗓️ Siguientes Pasos</h3>
+                            <a href="calendario_citas.php" class="btn btn-secondary btn-lg">
+                                ⬅️ Volver al Calendario
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </body>
+        </html>
+        <?php
         exit;
+        
+        // header("Location: ver_historia.php?id=$id_historia&msg=Consulta Finalizada");
+        // exit;
         
     } catch (Exception $e) {
         $error = "Error al guardar historia: " . $e->getMessage();

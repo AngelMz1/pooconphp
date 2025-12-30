@@ -77,11 +77,7 @@ $citas_pendientes = $supabase->select('citas', '*, pacientes(*)', ($filter ? "$f
                                     <p class="mb-0 text-sm"><?= $cita['motivo_consulta'] ?></p>
                                 </div>
                                 <div class="text-right">
-                                    <form method="POST">
-                                        <input type="hidden" name="action" value="atender">
-                                        <input type="hidden" name="cita_id" value="<?= $cita['id'] ?>">
-                                        <button type="submit" class="btn btn-sm btn-primary">Atender</button>
-                                    </form>
+                                    <a href="atender_consulta.php?cita_id=<?= $cita['id'] ?>" class="btn btn-sm btn-primary">Atender</a>
                                     <a href="ver_paciente.php?id=<?= $paciente['id_paciente'] ?>" class="btn btn-sm btn-secondary mt-1">Ver Historia</a>
                                 </div>
                             </div>

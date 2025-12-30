@@ -2,11 +2,100 @@
 // Header partial
 ?>
 <header class="top-nav">
+    <?php
+    // Fetch Configuration
+    require_once __DIR__ . '/../src/Configuracion.php';
+    use App\Configuracion;
+    $sysConfig = [
+        'nombre_institucion' => 'Centro Médico (Error Config)',
+        'color_principal' => '#0d6efd',
+        'color_secundario' => '#6c757d',
+        'logo_url' => ''
+    ];
+    try {
+        $configModel = new Configuracion();
+        $sysConfig = $configModel->obtenerConfiguracion();
+    } catch (Exception $e) {
+        // Fallback silently or log
+        // error_log("Config Load Error: " . $e->getMessage());
+    }
+    ?>
+    
+    <!-- Dynamic Branding Styles -->
+    <style>
+        :root {
+            --primary: <?php echo $sysConfig['color_principal']; ?>;
+            /* Simple darkening for primary-dark, usually handled by HSL but we'll stick to primary for now or use calc */
+            /* Ideally we'd convert hex to HSL to keep the shading logic, but for MVP direct override is okay. */
+            
+            --secondary: <?php echo $sysConfig['color_secundario']; ?>;
+        }
+        
+        /* Toggle Switch Styles */
+        .theme-switch-wrapper {
+            display: flex;
+            align-items: center;
+            margin-right: 1rem;
+        }
+        .theme-switch {
+            display: inline-block;
+            height: 28px; /* Slightly lowered height */
+            position: relative;
+            width: 52px; /* Slightly reduced width */
+        }
+        .theme-switch input {
+            display: none;
+        }
+        .slider {
+            background-color: #ccc;
+            bottom: 0;
+            cursor: pointer;
+            left: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            background-color: #fff;
+            bottom: 4px;
+            content: "";
+            height: 20px;
+            left: 4px;
+            position: absolute;
+            transition: .4s;
+            width: 20px;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+        .slider .icon {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 14px;
+            z-index: 1;
+        }
+        .slider .sun { left: 6px; color: #f39c12; opacity: 1; transition: .4s; }
+        .slider .moon { right: 6px; color: #f1c40f; opacity: 0; transition: .4s; }
+        
+        input:checked + .slider .sun { opacity: 0; }
+        input:checked + .slider .moon { opacity: 1; }
+    </style>
+
     <div class="nav-brand">
         <button class="mobile-menu-toggle" id="menu-toggle">
             ☰
         </button>
-        <span>Sistema de Gestión Médica</span>
+        <?php if (!empty($sysConfig['logo_url'])): ?>
+            <img src="<?php echo htmlspecialchars($sysConfig['logo_url']); ?>" alt="Logo" style="height: 30px; margin-right: 10px;">
+        <?php endif; ?>
+        <span><?php echo htmlspecialchars($sysConfig['nombre_institucion']); ?></span>
     </div>
 
     <!-- Sidebar Overlay for Mobile -->
@@ -21,9 +110,15 @@
     </script>
     
     <div class="user-profile">
-        <button id="theme-toggle" class="btn btn-sm btn-secondary" style="margin-right: 1rem;" title="Cambiar Tema">
-            <span id="theme-icon">🌙</span>
-        </button>
+        <div class="theme-switch-wrapper">
+             <label class="theme-switch" for="checkbox-theme">
+                <input type="checkbox" id="checkbox-theme" />
+                <div class="slider round">
+                    <span class="icon sun">☀️</span>
+                    <span class="icon moon">🌙</span>
+                </div>
+            </label>
+        </div>
 
         <div class="user-info text-right">
             <span class="user-name">
@@ -45,31 +140,19 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // Theme Toggle Logic
-            const toggleBtn = document.getElementById('theme-toggle');
-            const themeIcon = document.getElementById('theme-icon');
+            const toggleCheckbox = document.getElementById('checkbox-theme');
             const html = document.documentElement;
-
-            // Set initial icon
+            
+            // Set initial state
             if (html.getAttribute('data-theme') === 'dark') {
-                themeIcon.textContent = '☀️';
-                toggleBtn.classList.replace('btn-secondary', 'btn-outline'); 
+                toggleCheckbox.checked = true;
             }
 
-            toggleBtn.addEventListener('click', () => {
-                const currentTheme = html.getAttribute('data-theme');
-                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            toggleCheckbox.addEventListener('change', function() {
+                const newTheme = this.checked ? 'dark' : 'light';
                 
                 html.setAttribute('data-theme', newTheme);
                 localStorage.setItem('theme', newTheme);
-                
-                // Update icon
-                if (newTheme === 'dark') {
-                    themeIcon.textContent = '☀️';
-                    toggleBtn.classList.replace('btn-secondary', 'btn-outline');
-                } else {
-                    themeIcon.textContent = '🌙';
-                    toggleBtn.classList.replace('btn-outline', 'btn-secondary');
-                }
             });
 
             // Mobile Menu Toggle Logic
@@ -92,3 +175,4 @@
         });
     </script>
 </header>
+

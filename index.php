@@ -38,20 +38,36 @@ try {
     // Silenciar errores de configuración por ahora
 }
 
-// Lógica específica para Medico
+// Lógica específica para Medico y Admin
 $consultasPendientes = [];
-$esMedico = isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'medico';
+$rol = $_SESSION['user_role'] ?? '';
+$esMedico = $rol === 'medico';
+$esAdmin = $rol === 'admin';
 
-if ($esMedico && isset($_SESSION['user_id'])) {
+if (($esMedico || $esAdmin) && isset($_SESSION['user_id'])) {
     try {
-        $medicoModel = new Medico($supabase);
         $consultaModel = new Consulta($supabase);
         
-        // Obtener perfil médico asociado al usuario
-        $perfilMedico = $medicoModel->obtenerPorUserId($_SESSION['user_id']);
-        
-        if ($perfilMedico) {
-            $consultasPendientes = $consultaModel->obtenerPendientesPorMedico($perfilMedico['id']);
+        if ($esAdmin) {
+            // Admin ve TODAS las pendientes
+            $consultasPendientes = $consultaModel->obtenerPendientesPorMedico(null); // Need to adjust this method or call new one
+            // Actually, obtenerPendientesPorMedico uses "medico_id=eq.$id". Passing null won't work well if logic doesn't handle it.
+            // Let's check Consulta.php logic or use a raw select.
+            // Using raw select for admin to get all 'pendiente'.
+             $consultasPendientes = $supabase->select(
+                'consultas', 
+                '*, pacientes:id_paciente(primer_nombre, primer_apellido, documento_id)', 
+                "estado=eq.pendiente", 
+                'id_consulta.asc'
+            );
+        } else {
+             // Medico solo ve las suyas
+            $medicoModel = new Medico($supabase);
+            $perfilMedico = $medicoModel->obtenerPorUserId($_SESSION['user_id']);
+            
+            if ($perfilMedico) {
+                $consultasPendientes = $consultaModel->obtenerPendientesPorMedico($perfilMedico['id']);
+            }
         }
     } catch (Exception $e) {
         // Manejar error silenciosamente o loguear
@@ -85,7 +101,7 @@ if ($esMedico && isset($_SESSION['user_id'])) {
                     </p>
                 </div>
 
-                <?php if ($esMedico): ?>
+                <?php if ($esMedico || $esAdmin): ?>
                     <!-- Panel Específico de Médico -->
                     <div class="card mb-4 fade-in">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">

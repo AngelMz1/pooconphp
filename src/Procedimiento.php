@@ -23,22 +23,41 @@ class Procedimiento extends BaseModel
     public function crear($datos)
     {
         try {
-            $procData = [
-                'id_historia' => (int)$datos['id_historia'],
-                'codigo_cups' => $this->validator->sanitize($datos['codigo_cups']),
-                'nombre_procedimiento' => $this->validator->sanitize($datos['nombre_procedimiento']),
-                'cantidad' => (int)($datos['cantidad'] ?? 1),
-                'justificacion' => $this->validator->sanitize($datos['justificacion'] ?? '')
-            ];
-
-            if (!empty($datos['observaciones'])) {
-                $procData['observaciones'] = $this->validator->sanitize($datos['observaciones']);
+            // 1. Resolver proced_id a partir del codigo_cups
+            $codigo = $this->validator->sanitize($datos['codigo_cups']);
+            $procedimientoRef = $this->supabase->select('procedimientos', 'id', "codigo=eq.$codigo");
+            
+            $procedId = null;
+            if (!empty($procedimientoRef) && isset($procedimientoRef[0]['id'])) {
+                $procedId = $procedimientoRef[0]['id'];
+            } else {
+                // Opción: Insertar nuevo procedimiento en catálogo si no existe? 
+                // O lanzar error. Por estabilidad, lanzamos error si no existe.
+                // O podríamos usar un ID "Genérico" si existe.
+                throw new \Exception("Procedimiento con código $codigo no encontrado en la base de datos.");
             }
 
-            $resultado = $this->supabase->insert('procedimientos', $procData);
+            // 2. Insertar en solicitudes
+            // Nota: solicitudes usa id_consulta, no id_historia directamente (aunque están relacionadas)
+            // Debemos asegurarnos de recibir id_consulta
+            if (empty($datos['id_consulta'])) {
+                 // Intentar obtener id_consulta de la historia? (Costoso)
+                 // Mejor requerirlo.
+                 // Si falla, usar 0 o null si es permitido? Check schema: id_consulta int.
+                 throw new \Exception("Se requiere id_consulta para solicitar procedimientos.");
+            }
+
+            $solicitudData = [
+                'id_consulta' => (int)$datos['id_consulta'],
+                'proced_id' => $procedId,
+                'cantidad' => (int)($datos['cantidad'] ?? 1),
+                'fecha' => date('Y-m-d H:i:s')
+            ];
+
+            $resultado = $this->supabase->insert('solicitudes', $solicitudData);
             return $resultado;
         } catch (\Exception $e) {
-            throw new \Exception("Error al crear procedimiento: " . $e->getMessage());
+            throw new \Exception("Error al crear solicitud de procedimiento: " . $e->getMessage());
         }
     }
 
