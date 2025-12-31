@@ -25,14 +25,15 @@ try {
         $supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
         
         // Obtener estadísticas si las clases existen
-        // Simplificación para no romper si no existen los modelos perfectos aun
-        if (class_exists('App\Models\Paciente')) {
+        if (class_exists('App\\Paciente')) {
              $paciente = new Paciente($supabase);
              $totalPacientes = $paciente->contarTotal();
         }
         
-        // Count manual si no hay modelo historia
-        // $totalHistorias = ...
+        if (class_exists('App\\HistoriaClinica')) {
+             $historia = new HistoriaClinica($supabase);
+             $totalHistorias = $historia->contarTotal();
+        }
     }
 } catch (Exception $e) {
     // Silenciar errores de configuración por ahora

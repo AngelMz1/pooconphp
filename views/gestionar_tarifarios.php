@@ -1,39 +1,37 @@
-require_once '../src/Tarifario.php';
-require_once '../includes/header.php';
+<?php
+require_once '../vendor/autoload.php';
+require_once '../includes/auth_helper.php';
 
+use App\SupabaseClient;
 use App\Tarifario;
+use Dotenv\Dotenv;
 
-// Check Admin
-if (!isset($_SESSION['rol']) || $_SESSION['rol'] !== 'admin') {
-    echo "<div class='container mt-5 alert alert-danger'>Acceso denegado.</div>";
-    require_once '../includes/footer.php';
-    exit;
-}
+$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
+$dotenv->load();
 
-$tarifario = new Tarifario();
-$mensaje = '';
+requireLogin();
+requireRole('admin');
 
-// Handle Form Submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['action']) && $_POST['action'] === 'crear') {
-        $codigo = $_POST['codigo'];
-        $nombre = $_POST['nombre_servicio'];
-        $precio = $_POST['precio'];
+// La tabla tarifarios no existe aún en la base de datos
+$mensaje = "<div class='alert alert-warning'>Funcionalidad de tarifarios no disponible. La tabla 'tarifarios' no existe en la base de datos.</div>";
+$servicios = []; // List all active and inactive
+?><!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Tarifarios</title>
+    <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <?php include '../includes/sidebar.php'; ?>
+        <?php include '../includes/header.php'; ?>
         
-        if ($tarifario->crearServicio($codigo, $nombre, $precio)) {
-            $mensaje = "<div class='alert alert-success'>Servicio creado correctamente.</div>";
-        } else {
-            $mensaje = "<div class='alert alert-danger'>Error al crear servicio. Verifique el código.</div>";
-        }
-    }
-}
-
-$servicios = $tarifario->listarServicios(false); // List all active and inactive
-?>
-
-<div class="container mt-4">
-    <h2>Gestión de Tarifarios</h2>
-    <?php echo $mensaje; ?>
+        <main class="main-content">
+            <div class="container">
+                <h2>Gestión de Tarifarios</h2>
+                <?php echo $mensaje; ?>
 
     <div class="card shadow mb-4">
         <div class="card-header">
@@ -101,7 +99,9 @@ $servicios = $tarifario->listarServicios(false); // List all active and inactive
                 </table>
             </div>
         </div>
+                </div>
+            </div>
+        </main>
     </div>
-</div>
-
-<?php require_once '../includes/footer.php'; ?>
+</body>
+</html>

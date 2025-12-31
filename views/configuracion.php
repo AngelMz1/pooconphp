@@ -1,15 +1,19 @@
-require_once '../src/Configuracion.php';
-require_once '../includes/header.php';
+<?php
+require_once '../vendor/autoload.php';
+require_once '../includes/auth_helper.php';
 
+use App\SupabaseClient;
 use App\Configuracion;
+use Dotenv\Dotenv;
 
-// Verificar permisos de admin
-if (!isset($_SESSION['rol']) || $_SESSION['rol'] !== 'admin') {
-    header("Location: login.php");
-    exit;
-}
+$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
+$dotenv->load();
 
-$configuracion = new Configuracion();
+requireLogin();
+requireRole('admin');
+
+$supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
+$configuracion = new Configuracion($supabase);
 $mensaje = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -26,11 +30,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $datos = $configuracion->obtenerConfiguracion();
-?>
-
-<div class="container mt-4">
-    <h2>Configuración del Sistema</h2>
-    <?php echo $mensaje; ?>
+?><!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración del Sistema</title>
+    <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <?php include '../includes/sidebar.php'; ?>
+        <?php include '../includes/header.php'; ?>
+        
+        <main class="main-content">
+            <div class="container">
+                <h2>Configuración del Sistema</h2>
+                <?php echo $mensaje; ?>
     
     <div class="card shadow">
         <div class="card-body">
@@ -62,8 +78,9 @@ $datos = $configuracion->obtenerConfiguracion();
 
                 <button type="submit" class="btn btn-primary">Guardar Cambios</button>
             </form>
-        </div>
+                </div>
+            </div>
+        </main>
     </div>
-</div>
-
-<?php require_once '../includes/footer.php'; ?>
+</body>
+</html>

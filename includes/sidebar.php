@@ -1,4 +1,7 @@
 <?php
+// Incluir funciones de autenticación
+require_once __DIR__ . '/auth_helper.php';
+
 // Determinar ruta base para enlaces
 // Usamos SCRIPT_NAME para saber en qué archivo estamos realmente
 $scriptName = $_SERVER['SCRIPT_NAME']; // ej: /pooconphp/index.php o /pooconphp/views/login.php

@@ -44,8 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // Obtener listas para el formulario
-$medicos = $supabase->select('users', '*', "rol.eq.medico");
-$pacientes = $supabase->select('pacientes', 'id_paciente, primer_nombre, primer_apellido, documento_id'); // Simple lista
+$medicos = $supabase->select('medicos', 'id, primer_nombre, primer_apellido, especialidad_id');
+$pacientes = $supabase->select('pacientes', 'id_paciente, primer_nombre, primer_apellido, documento_id');
 
 // Obtener citas futuras
 // Supabase query filter: fecha_hora >= now() ideally. 
@@ -97,7 +97,9 @@ $citas = $supabase->select('citas', '*, pacientes(primer_nombre, primer_apellido
                         <select name="medico_id" required>
                             <option value="">Seleccione Médico...</option>
                             <?php foreach($medicos as $m): ?>
-                                <option value="<?= $m['id'] ?>"><?= $m['nombre_completo'] ?></option>
+                                <option value="<?= $m['id'] ?>">
+                                    Dr. <?= $m['primer_nombre'] ?> <?= $m['primer_apellido'] ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>

@@ -1,32 +1,23 @@
+<?php
 require_once '../vendor/autoload.php';
-require_once '../src/Facturacion.php';
-require_once '../src/Paciente.php';
-require_once '../src/Configuracion.php';
 require_once '../includes/auth_helper.php';
 
-$dotenv = \Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->safeLoad();
-
+use App\SupabaseClient;
 use App\Facturacion;
 use App\Paciente;
 use App\Configuracion;
+use Dotenv\Dotenv;
 
-session_start();
+$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
+$dotenv->load();
+
 requireLogin();
 
 $id = $_GET['id'] ?? null;
 if (!$id) die("ID de factura no válido");
 
-$facturaModel = new Facturacion();
-$factura = $facturaModel->obtenerFactura($id);
-
-if (!$factura) die("Factura no encontrada");
-
-$pacienteModel = new Paciente();
-$paciente = $pacienteModel->obtenerPaciente($factura['paciente_id']);
-
-$configModel = new Configuracion();
-$config = $configModel->obtenerConfiguracion();
+// La tabla facturas no existe aún en la base de datos
+die("Funcionalidad de facturación no disponible. La tabla 'facturas' no existe en la base de datos.");
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -37,7 +28,7 @@ $config = $configModel->obtenerConfiguracion();
         body { font-family: Arial, sans-serif; font-size: 14px; color: #333; }
         .invoice-box { max-width: 800px; margin: auto; padding: 30px; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0, 0, 0, .15); }
         .header { margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
-        .company-name { font-size: 24px; font-weight: bold; color: <?php echo $config['color_principal']; ?>; }
+        .company-name { font-size: 24px; font-weight: bold; color: <?php echo $config['color_principal'] ?? '#333'; ?>; }
         .invoice-details { text-align: right; }
         .table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         .table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
@@ -63,7 +54,7 @@ $config = $configModel->obtenerConfiguracion();
                          <?php if (!empty($config['logo_url'])): ?>
                             <img src="<?php echo htmlspecialchars($config['logo_url']); ?>" style="height: 50px;">
                         <?php endif; ?>
-                        <div class="company-name"><?php echo htmlspecialchars($config['nombre_institucion']); ?></div>
+                        <div class="company-name"><?php echo htmlspecialchars($config['nombre_institucion'] ?? 'Institución de Salud'); ?></div>
                     </td>
                     <td style="border: none; text-align: right;">
                         <h2>FACTURA DE VENTA</h2>
@@ -90,19 +81,23 @@ $config = $configModel->obtenerConfiguracion();
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($factura['items'] as $item): ?>
-                <tr>
-                    <td><?php echo htmlspecialchars($item['concepto']); ?></td>
-                    <td><?php echo $item['cantidad']; ?></td>
-                    <td>$<?php echo number_format($item['precio_unitario'], 2); ?></td>
-                    <td>$<?php echo number_format($item['subtotal'], 2); ?></td>
-                </tr>
-                <?php endforeach; ?>
+                <?php if (!empty($factura['items'])): ?>
+                    <?php foreach ($factura['items'] as $item): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($item['concepto'] ?? 'Concepto'); ?></td>
+                        <td><?php echo $item['cantidad'] ?? 1; ?></td>
+                        <td>$<?php echo number_format($item['precio_unitario'] ?? 0, 2); ?></td>
+                        <td>$<?php echo number_format($item['subtotal'] ?? 0, 2); ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <tr><td colspan="4">No hay items en esta factura</td></tr>
+                <?php endif; ?>
             </tbody>
         </table>
 
         <div class="total">
-            Total a Pagar: $<?php echo number_format($factura['total'], 2); ?>
+            Total a Pagar: $<?php echo number_format($factura['total'] ?? 0, 2); ?>
         </div>
         
         <div style="margin-top: 40px; font-size: 12px; color: #777;">

@@ -33,6 +33,13 @@ try {
     
     $historias = $historiaModel->obtenerPorPaciente($id);
     $totalHistorias = count($historias);
+    
+    // Debug: mostrar información
+    // echo "<pre>Debug - ID Paciente: $id<br>";
+    // echo "Historias encontradas: " . count($historias) . "<br>";
+    // var_dump($historias);
+    // echo "</pre>";
+    
 } catch (Exception $e) {
     $error = $e->getMessage();
 }
@@ -286,7 +293,7 @@ try {
                                             echo $fecha->format('d/m/Y H:i');
                                             ?>
                                         </td>
-                                        <td><?= htmlspecialchars(substr($h['motivo_consulta'], 0, 50)) ?>...</td>
+                                        <td><?= htmlspecialchars(substr($h['motivo_consulta'] ?? 'Sin motivo registrado', 0, 50)) ?>...</td>
                                         <td><?= htmlspecialchars($h['diagnostico'] ?: 'Pendiente') ?></td>
                                         <td>
                                             <?php if ($h['fecha_egreso']): ?>

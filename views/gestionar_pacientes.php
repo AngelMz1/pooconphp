@@ -93,8 +93,7 @@ if ($_POST) {
             'hech_victimizantes' => $_POST['hech_victimizantes'] ?? null,
             
             // Acudiente
-            'acudiente_id' => !empty($_POST['acudiente_id']) ? (int)$_POST['acudiente_id'] : null,
-            'acudiente_documento' => $_POST['acudiente_documento'] ?? null
+            'acudiente_id' => !empty($_POST['acudiente_id']) ? (int)$_POST['acudiente_id'] : null
 
         ];
 
