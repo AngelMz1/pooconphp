@@ -3,21 +3,28 @@
 ?>
 <header class="top-nav">
     <?php
-    // Fetch Configuration
+    // Fetch Configuration dynamically
     require_once __DIR__ . '/../src/Configuracion.php';
     use App\Configuracion;
+    
+    // Default config fallback
     $sysConfig = [
-        'nombre_institucion' => 'Centro Médico (Error Config)',
+        'nombre_institucion' => 'Mi Centro Médico',
         'color_principal' => '#0d6efd',
         'color_secundario' => '#6c757d',
         'logo_url' => ''
     ];
+    
     try {
-        $configModel = new Configuracion();
-        $sysConfig = $configModel->obtenerConfiguracion();
+        $configModel = new Configuracion(); 
+        // Note: SupabaseClient is initialized inside Configuracion constructor if not passed, 
+        // provided environment variables are loaded.
+        $dbConfig = $configModel->obtenerConfiguracion();
+        if ($dbConfig) {
+            $sysConfig = array_merge($sysConfig, $dbConfig);
+        }
     } catch (Exception $e) {
-        // Fallback silently or log
-        // error_log("Config Load Error: " . $e->getMessage());
+        // Fallback silently if config fails to load
     }
     ?>
     

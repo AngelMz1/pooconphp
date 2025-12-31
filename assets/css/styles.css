@@ -305,12 +305,13 @@ p {
 }
 
 .btn-secondary {
-    background: var(--gray-600);
+    background: var(--secondary);
     color: var(--white);
 }
 
 .btn-secondary:hover {
-    background: var(--gray-700);
+    background: var(--secondary);
+    filter: brightness(0.9);
 }
 
 .btn-outline {

@@ -62,6 +62,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $error = "Error al actualizar contraseña: " . $e->getMessage();
             }
         }
+    } elseif ($_POST['action'] === 'eliminar') {
+        $userId = $_POST['user_id'];
+        
+        // Evitar auto-eliminación
+        if ($userId == $_SESSION['user_id']) {
+            $error = "No puedes eliminar tu propia cuenta.";
+        } else {
+            try {
+                // Intentar eliminar
+                $result = $supabase->delete('users', "id=eq.$userId");
+                // Verificar si hubo error (SupabaseClient a veces retorna array con error)
+                if (isset($result['error'])) {
+                     $error = "Error al eliminar usuario. Verifique que no tenga registros asociados.";
+                } else {
+                     header("Location: gestionar_usuarios.php?msg=Usuario Eliminado");
+                     exit;
+                }
+            } catch (Exception $e) {
+                $error = "No se puede eliminar el usuario. Es probable que tenga citas o registros asociados. " . $e->getMessage();
+            }
+        }
     }
 }
 
@@ -159,8 +180,15 @@ if (isset($_GET['msg'])) $msg = $_GET['msg'];
                                         <td><?= date('d/m/Y', strtotime($u['created_at'])) ?></td>
                                         <td>
                                             <button class="btn btn-sm btn-warning" onclick="abrirResetPassword(<?= $u['id'] ?>, '<?= htmlspecialchars($u['username']) ?>')">
-                                                🔑 Cambiar Clave
+                                                🔑 Clave
                                             </button>
+                                            <form method="POST" onsubmit="return confirm('¿Está seguro de eliminar este usuario? Esta acción es irreversible.');" style="display:inline;">
+                                                <input type="hidden" name="action" value="eliminar">
+                                                <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
+                                                <button type="submit" class="btn btn-sm btn-danger" <?= ($u['id'] == $_SESSION['user_id']) ? 'disabled' : '' ?>>
+                                                    🗑️
+                                                </button>
+                                            </form>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

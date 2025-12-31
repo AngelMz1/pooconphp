@@ -12,9 +12,48 @@ $dotenv->load();
 requireLogin();
 requireRole('admin');
 
-// La tabla tarifarios no existe aún en la base de datos
-$mensaje = "<div class='alert alert-warning'>Funcionalidad de tarifarios no disponible. La tabla 'tarifarios' no existe en la base de datos.</div>";
-$servicios = []; // List all active and inactive
+$supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
+$tarifarioModel = new Tarifario($supabase);
+$mensaje = '';
+
+// Procesar Acciones
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+    
+    try {
+        if ($action === 'crear') {
+            $codigo = $_POST['codigo'] ?? '';
+            $nombre = $_POST['nombre_servicio'] ?? '';
+            $precio = $_POST['precio'] ?? 0;
+            $desc = $_POST['descripcion'] ?? '';
+            
+            $res = $tarifarioModel->crearServicio($codigo, $nombre, $precio, $desc);
+            if ($res) {
+                 $mensaje = "<div class='alert alert-success'>Servicio agregado correctamente.</div>";
+            }
+        } elseif ($action === 'toggle') {
+            $id = $_POST['id'] ?? 0;
+            $currentStatus = $_POST['current_status'] ?? 'f';
+            $newStatus = ($currentStatus == 't' || $currentStatus == '1' || $currentStatus === true) ? false : true;
+            
+            $tarifarioModel->actualizarServicio($id, ['activo' => $newStatus]);
+             $mensaje = "<div class='alert alert-success'>Estado actualizado.</div>";
+        }
+    } catch (Exception $e) {
+        $mensaje = "<div class='alert alert-danger'>Error: " . $e->getMessage() . "</div>";
+    }
+}
+
+// Obtener Lista
+try {
+    // Listar todos (activo e inactivo)
+    // El método listarServicios por defecto trae activos.
+    // Modificamos Tarifario.php si es necesario o usamos select directo para admin
+    $servicios = $supabase->select('tarifarios', '*', '', 'codigo.asc');
+} catch (Exception $e) {
+    $servicios = [];
+    $mensaje = "<div class='alert alert-danger'>Error al cargar tarifarios: " . $e->getMessage() . "</div>";
+}
 ?><!DOCTYPE html>
 <html lang="es">
 <head>
@@ -77,18 +116,34 @@ $servicios = []; // List all active and inactive
                     </thead>
                     <tbody>
                         <?php if (!empty($servicios)): ?>
-                            <?php foreach ($servicios as $s): ?>
+                            <?php foreach ($servicios as $s): 
+                                $isActivo = ($s['activo'] === true || $s['activo'] === 't' || $s['activo'] === 1);
+                            ?>
                                 <tr>
-                                    <td><?php echo htmlspecialchars($s['codigo']); ?></td>
-                                    <td><?php echo htmlspecialchars($s['nombre_servicio']); ?></td>
+                                    <td><strong><?php echo htmlspecialchars($s['codigo']); ?></strong></td>
+                                    <td>
+                                        <?php echo htmlspecialchars($s['nombre_servicio']); ?>
+                                        <?php if(!empty($s['descripcion'])): ?>
+                                            <br><small class="text-muted"><?php echo htmlspecialchars($s['descripcion']); ?></small>
+                                        <?php endif; ?>
+                                    </td>
                                     <td>$<?php echo number_format($s['precio'], 2); ?></td>
                                     <td>
-                                        <span class="badge <?php echo $s['activo'] === 't' ? 'badge-success' : 'badge-danger'; ?>">
-                                            <?php echo $s['activo'] === 't' ? 'Activo' : 'Inactivo'; ?>
+                                        <span class="badge <?php echo $isActivo ? 'badge-success' : 'badge-danger'; ?>">
+                                            <?php echo $isActivo ? 'Activo' : 'Inactivo'; ?>
                                         </span>
                                     </td>
                                     <td>
-                                        <button class="btn btn-sm btn-secondary">Editar</button>
+                                        <form method="POST" style="display:inline;">
+                                            <input type="hidden" name="action" value="toggle">
+                                            <input type="hidden" name="id" value="<?= $s['id'] ?>">
+                                            <input type="hidden" name="current_status" value="<?= $isActivo ? 't' : 'f' ?>">
+                                            <?php if($isActivo): ?>
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Desactivar">🚫</button>
+                                            <?php else: ?>
+                                                <button type="submit" class="btn btn-sm btn-success" title="Activar">✅</button>
+                                            <?php endif; ?>
+                                        </form>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

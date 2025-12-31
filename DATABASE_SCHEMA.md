@@ -18,7 +18,21 @@
 | `created_at` | TIMESTAMP | DEFAULT NOW() | Fecha de creación |
 | `updated_at` | TIMESTAMP | DEFAULT NOW() | Fecha de actualización |
 
+
 **Nota**: El campo `estrato` se añadió después de la creación inicial y debe estar presente en la base de datos actual.
+
+---
+
+## Tabla: consultas
+
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `id_consulta` | SERIAL | PRIMARY KEY | ID único autogenerado |
+| `id_paciente` | INTEGER | REFERENCES pacientes | ID del paciente |
+| `motivo_consulta` | TEXT | NULL | Motivo de consulta |
+| `enfermedad_actual`| TEXT | NULL | Enfermedad actual |
+| `medico_id` | INTEGER | REFERENCES users | ID del médico que atiende |
+| `estado` | VARCHAR | NOT NULL | 'pendiente', 'en_proceso', 'finalizada' |
 
 ---
 
@@ -28,57 +42,61 @@
 |-------|------|-----------|-------------|
 | `id_historia` | SERIAL | PRIMARY KEY | ID único autogenerado |
 | `id_paciente` | INTEGER | REFERENCES pacientes | ID del paciente (FK) |
+| `id_consulta` | INTEGER | REFERENCES consultas | ID de la consulta asociada |
 | `fecha_ingreso` | TIMESTAMP | DEFAULT NOW() | Fecha y hora de ingreso |
-| `fecha_egreso` | TIMESTAMP | NULL | Fecha y hora de egreso (si aplica) |
-| `motivo_consulta` | TEXT | NULL | Motivo de la consulta |
+| `motivo_consulta` | TEXT | NULL | Motivo (copiado de consulta) |
 | `analisis_plan` | TEXT | NULL | Análisis y plan de tratamiento |
 | `diagnostico` | TEXT | NULL | Diagnóstico médico |
 | `tratamiento` | TEXT | NULL | Tratamiento prescrito |
 | `observaciones` | TEXT | NULL | Observaciones adicionales |
-| `created_at` | TIMESTAMP | DEFAULT NOW() | Fecha de creación |
-| `updated_at` | TIMESTAMP | DEFAULT NOW() | Fecha de actualización |
+
+---
+
+## Tabla: signos_vitales
+
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `id` | SERIAL | PRIMARY KEY | ID único |
+| `id_historia` | INTEGER | REFERENCES historias_clinicas | Historia clínica asociada |
+| `ta` | VARCHAR | NULL | Tensión Arterial |
+| `pulso` | INTEGER | NULL | Pulso |
+| `f_res` | INTEGER | NULL | Frecuencia Respiratoria |
+| `temperatura` | DECIMAL | NULL | Temperatura |
+| `peso` | DECIMAL | NULL | Peso |
+| `talla` | INTEGER | NULL | Talla (cm) |
+| `sp02` | INTEGER | NULL | Saturación de Oxígeno |
+
+---
+
+## Tabla: formulas_medicas
+
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `id_formula` | SERIAL | PRIMARY KEY | ID único |
+| `id_historia` | INTEGER | REFERENCES historias_clinicas | Historia clínica asociada |
+| `medicamento_id` | INTEGER | REFERENCES medicamentos | ID del medicamento (Catálogo) |
+| `dosis` | VARCHAR | NULL | Dosis prescrita |
+| `cantidad` | INTEGER | NULL | Cantidad total |
+| `fecha_hora` | TIMESTAMP | DEFAULT NOW() | Fecha de prescripción |
+
+---
+
+## Tabla: procedimientos
+
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `id` | SERIAL | PRIMARY KEY | ID único |
+| `procedimiento` | VARCHAR | NULL | Nombre del procedimiento |
+| `descripcion` | TEXT | NULL | Descripción |
+| `codigo` | VARCHAR | NULL | Código CUPS/CIE10 |
 
 ---
 
 ## Relaciones
 
 ```
-pacientes (1) ----< (N) historias_clinicas
-   ↑                        ↓
-   |                        |
-   └── ON DELETE CASCADE ───┘
+pacientes (1) ----< (N) consultas
+consultas (1) ----< (1) historias_clinicas
+historias (1) ----< (N) signos_vitales
+historias (1) ----< (N) formulas_medicas
 ```
-
-**Descripción**: 
-- Un paciente puede tener múltiples historias clínicas
-- Al eliminar un paciente, se eliminan automáticamente sus historias clínicas (CASCADE)
-
----
-
-## Índices Recomendados
-
-```sql
--- Índice único en documento_id (ya existe por UNIQUE constraint)
-CREATE UNIQUE INDEX idx_pacientes_documento ON pacientes(documento_id);
-
--- Índice en id_paciente para historias_clinicas (ya existe por FK)
-CREATE INDEX idx_historias_paciente ON historias_clinicas(id_paciente);
-
--- Índice en fecha_ingreso para ordenamiento rápido
-CREATE INDEX idx_historias_fecha ON historias_clinicas(fecha_ingreso DESC);
-```
-
----
-
-## Políticas RLS (Row Level Security)
-
-```sql
--- Permitir todo para usuarios autenticados
-ALTER TABLE pacientes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE historias_clinicas ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Permitir todo en pacientes" ON pacientes FOR ALL USING (true);
-CREATE POLICY "Permitir todo en historias" ON historias_clinicas FOR ALL USING (true);
-```
-
-**Nota**: En producción, estas políticas deberían ser más restrictivas según roles de usuarios.

@@ -647,11 +647,58 @@ if (isset($_GET['success']) && !$error) {
             document.getElementById('submitBtn').style.display = currentTab === totalTabs - 1 ? 'inline-flex' : 'none';
         }
 
+
         // Cargar barrios cuando se selecciona ciudad
-        function loadBarrios(ciudadId) {
-            // Por ahora, esto se maneja en el servidor
-            // Podrías implementar AJAX aquí para cargar barrios dinámicamente
+        function loadBarrios(ciudadId, selectedId = null) {
+            const barrioSelect = document.getElementById('barrio_id');
+            barrioSelect.innerHTML = '<option value="">Cargando...</option>';
+            barrioSelect.disabled = true;
+
+            if (!ciudadId) {
+                 barrioSelect.innerHTML = '<option value="">Seleccionar primero una ciudad...</option>';
+                 barrioSelect.disabled = true;
+                 return;
+            }
+
+            fetch(`../api/get_barrios.php?ciudad_id=${ciudadId}`)
+                .then(response => response.json())
+                .then(data => {
+                    barrioSelect.innerHTML = '<option value="">Seleccionar...</option>';
+                    if (data && data.length > 0) {
+                        data.forEach(barrio => {
+                            const option = document.createElement('option');
+                            option.value = barrio.id;
+                            option.textContent = barrio.barrio; // Ajustar si el campo se llama diferente
+                            if (selectedId && (String(barrio.id) === String(selectedId))) {
+                                option.selected = true;
+                            }
+                            barrioSelect.appendChild(option);
+                        });
+                        barrioSelect.disabled = false;
+                    } else {
+                         barrioSelect.innerHTML = '<option value="">No hay barrios registrados para esta ciudad</option>';
+                         barrioSelect.disabled = true; // O false si quieres permitir 'null'
+                    }
+                })
+                .catch(error => {
+                    console.error('Error cargando barrios:', error);
+                    barrioSelect.innerHTML = '<option value="">Error al cargar barrios</option>';
+                    barrioSelect.disabled = false;
+                });
         }
+
+        // Auto-load on init if edit mode
+        window.addEventListener('DOMContentLoaded', () => {
+             const ciudadSelect = document.getElementById('ciudad_id');
+             if (ciudadSelect.value) {
+                 // Check if there is a pre-selected value for barrio (from PHP echo)
+                 // We can get it from a data attribute or inferred.
+                 // In edit mode, we can output the barrio_id to a JS variable.
+                 // Let's rely on the PHP value injected:
+                 const currentBarrioId = "<?= $isEdit ? ($paciente['barrio_id'] ?? '') : '' ?>";
+                 loadBarrios(ciudadSelect.value, currentBarrioId);
+             }
+        });
 
         // Validación del formulario
         document.getElementById('patientForm').addEventListener('submit', function(e) {
@@ -666,12 +713,31 @@ if (isset($_GET['success']) && !$error) {
             }
             <?php endif; ?>
 
-            // Validar campos requeridos del tab actual
-            const requiredFields = document.querySelectorAll('.tab-content.active [required]');
-            for (let field of requiredFields) {
-                if (!field.value) {
+            // Validar TODOS los campo requeridos en el formulario
+            const allRequired = document.querySelectorAll('#patientForm [required]');
+            for (let field of allRequired) {
+                // Verificar si el campo está visible y habilitado (o si es parte de un tab oculto)
+                // Si el valor está vacío o es el valor por defecto de un select
+                if (!field.value || field.value.trim() === '') {
                     e.preventDefault();
-                    alert('Por favor complete todos los campos requeridos (*)');
+                    
+                    // Encontrar el tab padre
+                    const tabContent = field.closest('.tab-content');
+                    if (tabContent) {
+                        const tabId = tabContent.id; // e.g., 'tab-0'
+                        const tabIndex = parseInt(tabId.split('-')[1]);
+                        
+                        // Cambiar al tab donde está el error
+                        showTab(tabIndex);
+                    }
+                    
+                    // Mostrar mensaje y enfocar
+                    // Obtener el label para un mensaje más claro
+                    let labelText = 'este campo';
+                    const label = document.querySelector(`label[for="${field.id}"]`);
+                    if (label) labelText = label.innerText.replace('*', '').trim();
+                    
+                    alert(`Por favor complete el campo obligatorio: ${labelText}`);
                     field.focus();
                     return false;
                 }
