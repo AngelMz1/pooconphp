@@ -35,7 +35,7 @@ class SupabaseClient
         
         $this->client = new Client([
             'base_uri' => $url,
-            'timeout' => 10,
+            'timeout' => 30,
             'headers' => [
                 'apikey' => $key,
                 'Authorization' => "Bearer $key",

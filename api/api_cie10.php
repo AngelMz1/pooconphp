@@ -18,7 +18,14 @@ try {
         exit;
     }
 
-    $termino = $_GET['q'];
+    // Sanitizar término
+    $termino = str_replace(['.', ':', '(', ')', ','], '', $_GET['q']);
+    
+    if (strlen($termino) < 2) {
+        echo json_encode([]);
+        exit;
+    }
+
     $supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
 
     // Buscar en la tabla cie10

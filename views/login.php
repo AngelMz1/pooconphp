@@ -38,6 +38,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['user_name'] = $user['nombre_completo'];
                 $_SESSION['user_role'] = $user['rol'];
                 
+                // --- Cargar Permisos ---
+                try {
+                     $perms = $supabase->select('user_permissions', 'permissions(name)', "user_id=eq.{$user['id']}");
+                     $permList = [];
+                     if (!empty($perms)) {
+                         foreach ($perms as $p) {
+                             if (isset($p['permissions']['name'])) {
+                                 $permList[] = $p['permissions']['name'];
+                             }
+                         }
+                     }
+                     $_SESSION['permissions'] = $permList;
+                } catch (Exception $e) {
+                     // Si falla, iniciar vacío
+                     $_SESSION['permissions'] = [];
+                }
+
                 header("Location: ../index.php");
                 exit;
             } else {

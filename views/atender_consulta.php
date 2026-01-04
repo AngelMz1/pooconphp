@@ -258,6 +258,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         .item-row { background: var(--gray-50); padding: 1rem; margin-bottom: 0.5rem; border-radius: 4px; border: 1px solid var(--gray-200); position: relative; }
         .btn-remove { position: absolute; top: 5px; right: 5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+        
+        .live-results-container {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid var(--gray-300);
+            border-radius: 0 0 4px 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 100;
+            max-height: 200px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body class="dashboard-container">
@@ -467,16 +481,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <template id="tpl-procedimiento">
         <div class="item-row fade-in">
             <button type="button" class="btn-remove" onclick="this.parentElement.remove()">×</button>
-            <div class="grid grid-3">
+            <div class="grid grid-3" style="position: relative;">
                 <div class="form-group">
-                    <input type="text" name="procedimientos[{i}][codigo]" placeholder="Código CUPS *" required>
+                    <input type="text" 
+                           id="proc-search-{i}"
+                           class="search-cups"
+                           placeholder="Buscar CUPS (Código o Nombre)..." 
+                           oninput="buscarCups(this, '{i}')"
+                           autocomplete="off"
+                           required>
+                    <div id="results-{i}" class="live-results-container" style="display:none;"></div>
                 </div>
-                <div class="form-group" style="grid-column: span 2;">
-                    <input type="text" name="procedimientos[{i}][nombre]" placeholder="Nombre del Procedimiento *" required>
+                <div class="form-group">
+                    <input type="text" name="procedimientos[{i}][codigo]" id="proc-code-{i}" placeholder="Código" readonly style="background: var(--gray-100);">
+                </div>
+                <div class="form-group">
+                    <input type="text" name="procedimientos[{i}][nombre]" id="proc-name-{i}" placeholder="Nombre" readonly style="background: var(--gray-100);">
                 </div>
             </div>
             <div class="form-group mb-0">
-                 <input type="number" name="procedimientos[{i}][cantidad]" value="1" placeholder="Cantidad">
+                 <input type="number" name="procedimientos[{i}][cantidad]" value="1" placeholder="Cantidad" min="1">
             </div>
         </div>
     </template>
@@ -484,30 +508,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script>
         let medIndex = 0;
         let procIndex = 0;
+        let debounceTimer;
 
         function showTab(tabId) {
-            // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(t => {
                 t.style.display = 'none';
                 t.classList.remove('active');
             });
-            // Deactivate all buttons
             document.querySelectorAll('.tab-btn').forEach(b => {
                 b.classList.remove('active');
             });
 
-            // Show target tab
             const target = document.getElementById(tabId);
             if (target) {
                 target.style.display = 'block';
                 target.classList.add('active');
                 
-                // Active button finding
                 const btns = document.querySelectorAll(`button[onclick="showTab('${tabId}')"]`);
-                if (btns.length > 0) {
-                     // The top tab bar button
-                     btns[0].classList.add('active');
-                }
+                if (btns.length > 0) btns[0].classList.add('active');
             }
         }
 
@@ -522,6 +540,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const html = tpl.replace(/{i}/g, procIndex++);
             document.getElementById('lista-procedimientos').insertAdjacentHTML('beforeend', html);
         }
+
+        // Buscar CUPS
+        function buscarCups(input, index) {
+            const query = input.value.trim();
+            const resultsContainer = document.getElementById(`results-${index}`);
+            
+            clearTimeout(debounceTimer);
+
+            if (query.length < 2) {
+                resultsContainer.style.display = 'none';
+                return;
+            }
+
+            debounceTimer = setTimeout(() => {
+                fetch(`../api/api_cups.php?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        resultsContainer.innerHTML = '';
+                        if (data.length > 0) {
+                            data.forEach(item => {
+                                const div = document.createElement('div');
+                                div.className = 'live-result-item';
+                                div.style.cssText = 'padding: 8px; cursor: pointer; border-bottom: 1px solid #eee;';
+                                div.onmouseover = () => div.style.background = '#f8f9fa';
+                                div.onmouseout = () => div.style.background = 'white';
+                                div.innerHTML = `<strong>${item.codigo}</strong> - ${item.descripcion}`;
+                                div.onclick = () => seleccionarCups(index, item);
+                                resultsContainer.appendChild(div);
+                            });
+                            resultsContainer.style.display = 'block';
+                        } else {
+                            resultsContainer.innerHTML = '<div style="padding:8px; color:gray;">No encontrado</div>';
+                            resultsContainer.style.display = 'block';
+                        }
+                    })
+                    .catch(err => console.error(err));
+            }, 300);
+        }
+
+        function seleccionarCups(index, item) {
+            document.getElementById(`proc-search-${index}`).value = item.codigo + ' - ' + item.descripcion;
+            document.getElementById(`proc-code-${index}`).value = item.codigo;
+            document.getElementById(`proc-name-${index}`).value = item.descripcion;
+            document.getElementById(`results-${index}`).style.display = 'none';
+        }
+
+        // Close results on click outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.classList.contains('search-cups')) {
+                document.querySelectorAll('.live-results-container').forEach(el => el.style.display = 'none');
+            }
+        });
     </script>
 </body>
 </html>

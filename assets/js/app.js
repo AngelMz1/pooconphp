@@ -261,7 +261,7 @@ const FormValidator = {
     },
 
     validateDocumento: function (value) {
-        return value && value.length >= 5 && value.length <= 20;
+        return value && value.length >= 8 && value.length <= 10;
     },
 
     validateRequired: function (value) {

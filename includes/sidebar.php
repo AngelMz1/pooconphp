@@ -100,6 +100,9 @@ if (!function_exists('isActive')) {
             <a href="<?= $viewsPath ?>gestionar_usuarios.php" class="menu-item <?= isActive('gestionar_usuarios.php') ?>">
                 <span class="menu-icon">🛠️</span> Gestionar Usuarios
             </a>
+            <a href="<?= $viewsPath ?>gestion_medicos.php" class="menu-item <?= isActive('gestion_medicos.php') ?>">
+                <span class="menu-icon">👨‍⚕️</span> Gestionar Médicos
+            </a>
             <a href="<?= $viewsPath ?>configuracion.php" class="menu-item <?= isActive('configuracion.php') ?>">
                 <span class="menu-icon">⚙️</span> Configuración
             </a>

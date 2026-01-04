@@ -15,6 +15,12 @@ class ReferenceData
     public function __construct(SupabaseClient $supabase)
     {
         $this->supabase = $supabase;
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        if (!isset($_SESSION['ref_cache'])) {
+            $_SESSION['ref_cache'] = [];
+        }
     }
 
     /**
@@ -22,14 +28,14 @@ class ReferenceData
      */
     public function getTiposDocumento()
     {
-        if (!isset($this->cache['tipo_documento'])) {
+        if (!isset($_SESSION['ref_cache']['tipo_documento'])) {
             try {
-                $this->cache['tipo_documento'] = $this->supabase->select('tipo_documento', '*', '', 'id.asc');
+                $_SESSION['ref_cache']['tipo_documento'] = $this->supabase->select('tipo_documento', '*', '', 'id.asc');
             } catch (\Exception $e) {
-                $this->cache['tipo_documento'] = [];
+                $_SESSION['ref_cache']['tipo_documento'] = [];
             }
         }
-        return $this->cache['tipo_documento'];
+        return $_SESSION['ref_cache']['tipo_documento'];
     }
 
     /**
@@ -37,14 +43,14 @@ class ReferenceData
      */
     public function getSexos()
     {
-        if (!isset($this->cache['sexo'])) {
+        if (!isset($_SESSION['ref_cache']['sexo'])) {
             try {
-                $this->cache['sexo'] = $this->supabase->select('sexo', '*', '', 'id.asc');
+                $_SESSION['ref_cache']['sexo'] = $this->supabase->select('sexo', '*', '', 'id.asc');
             } catch (\Exception $e) {
-                $this->cache['sexo'] = [];
+                $_SESSION['ref_cache']['sexo'] = [];
             }
         }
-        return $this->cache['sexo'];
+        return $_SESSION['ref_cache']['sexo'];
     }
 
     /**
@@ -52,14 +58,14 @@ class ReferenceData
      */
     public function getEstadosCiviles()
     {
-        if (!isset($this->cache['estado_civil'])) {
+        if (!isset($_SESSION['ref_cache']['estado_civil'])) {
             try {
-                $this->cache['estado_civil'] = $this->supabase->select('estado_civil', '*', '', 'id.asc');
+                $_SESSION['ref_cache']['estado_civil'] = $this->supabase->select('estado_civil', '*', '', 'id.asc');
             } catch (\Exception $e) {
-                $this->cache['estado_civil'] = [];
+                $_SESSION['ref_cache']['estado_civil'] = [];
             }
         }
-        return $this->cache['estado_civil'];
+        return $_SESSION['ref_cache']['estado_civil'];
     }
 
     /**
@@ -67,14 +73,14 @@ class ReferenceData
      */
     public function getCiudades()
     {
-        if (!isset($this->cache['ciudades'])) {
+        if (!isset($_SESSION['ref_cache']['ciudades'])) {
             try {
-                $this->cache['ciudades'] = $this->supabase->select('ciudades', '*', '', 'nombre.asc');
+                $_SESSION['ref_cache']['ciudades'] = $this->supabase->select('ciudades', '*', '', 'nombre.asc');
             } catch (\Exception $e) {
-                $this->cache['ciudades'] = [];
+                $_SESSION['ref_cache']['ciudades'] = [];
             }
         }
-        return $this->cache['ciudades'];
+        return $_SESSION['ref_cache']['ciudades'];
     }
 
     /**
@@ -84,15 +90,15 @@ class ReferenceData
     {
         $cacheKey = 'barrios_' . ($ciudad_id ?? 'all');
         
-        if (!isset($this->cache[$cacheKey])) {
+        if (!isset($_SESSION['ref_cache'][$cacheKey])) {
             try {
                 $filter = $ciudad_id ? "ciudad_id=eq.$ciudad_id" : '';
-                $this->cache[$cacheKey] = $this->supabase->select('barrio', '*', $filter, 'barrio.asc');
+                $_SESSION['ref_cache'][$cacheKey] = $this->supabase->select('barrio', '*', $filter, 'barrio.asc');
             } catch (\Exception $e) {
-                $this->cache[$cacheKey] = [];
+                $_SESSION['ref_cache'][$cacheKey] = [];
             }
         }
-        return $this->cache[$cacheKey];
+        return $_SESSION['ref_cache'][$cacheKey];
     }
 
     /**
@@ -100,14 +106,14 @@ class ReferenceData
      */
     public function getEPS()
     {
-        if (!isset($this->cache['eps'])) {
+        if (!isset($_SESSION['ref_cache']['eps'])) {
             try {
-                $this->cache['eps'] = $this->supabase->select('eps', '*', '', 'nombre_eps.asc');
+                $_SESSION['ref_cache']['eps'] = $this->supabase->select('eps', '*', '', 'nombre_eps.asc');
             } catch (\Exception $e) {
-                $this->cache['eps'] = [];
+                $_SESSION['ref_cache']['eps'] = [];
             }
         }
-        return $this->cache['eps'];
+        return $_SESSION['ref_cache']['eps'];
     }
 
     /**
@@ -208,7 +214,7 @@ class ReferenceData
         try {
             $resultado = $this->supabase->insert('acudientes', $datos);
             // Limpiar cache
-            unset($this->cache['acudientes']);
+            unset($_SESSION['ref_cache']['acudientes']);
             return $resultado;
         } catch (\Exception $e) {
             throw new \Exception("Error al crear acudiente: " . $e->getMessage());
@@ -255,6 +261,6 @@ class ReferenceData
      */
     public function clearCache()
     {
-        $this->cache = [];
+        $_SESSION['ref_cache'] = [];
     }
 }

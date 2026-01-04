@@ -199,7 +199,7 @@ p {
 }
 
 .grid-2 {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
 }
 
 .grid-3 {
@@ -1069,7 +1069,7 @@ tr:hover {
     select,
     textarea {
         background: hsl(220, 20%, 20%);
-        border-color: hsl(220, 15%, 30%);
+        border-color: #ffffff;
         color: var(--dark);
     }
 }
