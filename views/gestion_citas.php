@@ -133,9 +133,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         exit;
     }
     $id = $_POST['cita_id'];
-    $supabase->update('citas', ['estado' => 'pendiente'], "id.eq.$id");
-    header("Location: gestion_citas.php?msg=Cita Confirmada (Visible para el médico)");
-    exit;
+    try {
+        $result = $supabase->update('citas', ['estado' => 'pendiente'], "id=eq.$id");
+        header("Location: gestion_citas.php?msg=" . urlencode("Cita Confirmada (Visible para el médico)"));
+        exit;
+    } catch (Exception $e) {
+        header("Location: gestion_citas.php?error=" . urlencode("Error al confirmar: " . $e->getMessage()));
+        exit;
+    }
 }
 
 // --- Lógica para Cancelar Cita ---
@@ -151,7 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $supabase->update('citas', [
         'estado' => 'cancelada',
         'motivo_cancelacion' => $motivo
-    ], "id.eq.$id");
+    ], "id=eq.$id");
     
     header("Location: gestion_citas.php?msg=Cita Cancelada");
     exit;
@@ -399,16 +404,18 @@ while ($start <= $end) {
                                             $now = new DateTime();
                                             $isPast = $fecha < $now;
                                             
+                                            echo "<!-- Debug: Estado={$c['estado']}, CanConfirm=$canConfirm, IsPast=$isPast -->";
+                                            
                                             if ($isPast && ($c['estado'] === 'por_confirmar' || $c['estado'] === 'pendiente')) {
                                                 echo '<span class="badge badge-secondary">Vencida</span>';
                                             } else {
                                                 // Botón Confirmar
                                                 if($c['estado'] === 'por_confirmar' && $canConfirm): ?>
-                                                    <form method="POST" style="display:inline;">
+                                                    <form method="POST" style="display:inline; margin-right: 5px;">
                                                         <input type="hidden" name="action" value="confirmar">
                                                         <input type="hidden" name="cita_id" value="<?= $c['id'] ?>">
-                                                        <button type="submit" class="btn btn-sm btn-success" title="Confirmar">
-                                                            ✅
+                                                        <button type="submit" class="btn btn-sm btn-success" title="Confirmar" onclick="return confirm('¿Confirmar esta cita?')">
+                                                            ✅ Confirmar
                                                         </button>
                                                     </form>
                                                 <?php endif;
@@ -418,10 +425,15 @@ while ($start <= $end) {
                                                     <form method="POST" onsubmit="return confirm('¿Cancelar esta cita?');" style="display:inline;">
                                                         <input type="hidden" name="action" value="cancelar">
                                                         <input type="hidden" name="cita_id" value="<?= $c['id'] ?>">
-                                                        <input type="text" name="motivo_cancelacion" placeholder="Motivo..." required class="mb-1" style="width: 150px; padding: 0.25rem;">
-                                                        <button type="submit" class="btn btn-sm btn-danger">❌</button>
+                                                        <input type="text" name="motivo_cancelacion" placeholder="Motivo..." required style="width: 120px; padding: 0.25rem; margin-bottom: 2px;">
+                                                        <button type="submit" class="btn btn-sm btn-danger">❌ Cancelar</button>
                                                     </form>
-                                                <?php endif; 
+                                                <?php endif;
+                                                
+                                                // Si no hay botones, mostrar estado
+                                                if (!($c['estado'] === 'por_confirmar' && $canConfirm) && !(($c['estado'] === 'pendiente' || $c['estado'] === 'por_confirmar') && $canCancel)) {
+                                                    echo '<span class="badge badge-info">Sin acciones</span>';
+                                                }
                                             }
                                             ?>
                                         </td>

@@ -43,9 +43,8 @@ try {
         $pacientes = $pacienteModel->buscarPorNombre($busqueda);
     } elseif (!empty($filtroEstrato)) {
         $pacientes = $pacienteModel->obtenerPorEstrato($filtroEstrato);
-    } else {
-        $pacientes = $pacienteModel->obtenerTodos();
     }
+    // No cargar pacientes automáticamente - solo cuando se busque o filtre
 } catch (Exception $e) {
     $error = $e->getMessage();
 }
@@ -89,55 +88,54 @@ try {
 
         <!-- Panel de búsqueda y filtros -->
         <div class="card mb-4">
-            <div class="filter-toggle" onclick="toggleFilters()">
-                🔍 <span id="filter-toggle-text">Mostrar filtros</span>
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="search-input">Buscar por nombre, apellido o cédula</label>
+                    <input 
+                        type="text" 
+                        id="search-input"
+                        placeholder="🔍 Escribir nombre, apellido o cédula..."
+                        value="<?= htmlspecialchars($busqueda) ?>"
+                    >
+                </div>
+
+                <div class="filter-group">
+                    <label for="filter-estrato">Filtrar por estrato</label>
+                    <select id="filter-estrato">
+                        <option value="">Todos los estratos</option>
+                        <?php for ($i = 1; $i <= 6; $i++): ?>
+                            <option value="<?= $i ?>" <?= $filtroEstrato == $i ? 'selected' : '' ?>>
+                                Estrato <?= $i ?>
+                            </option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="page-size">Items por página</label>
+                    <select id="page-size">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
             </div>
-            
-            <div id="filter-panel" style="display: none;">
-                <div class="filter-row">
-                    <div class="filter-group">
-                        <label for="search-input">Buscar</label>
-                        <input 
-                            type="text" 
-                            id="search-input"
-                            placeholder="🔍 Escribir para buscar..."
-                            value="<?= htmlspecialchars($busqueda) ?>"
-                        >
-                    </div>
 
-                    <div class="filter-group">
-                        <label for="filter-estrato">Filtrar por estrato</label>
-                        <select id="filter-estrato">
-                            <option value="">Todos los estratos</option>
-                            <?php for ($i = 1; $i <= 6; $i++): ?>
-                                <option value="<?= $i ?>" <?= $filtroEstrato == $i ? 'selected' : '' ?>>
-                                    Estrato <?= $i ?>
-                                </option>
-                            <?php endfor; ?>
-                        </select>
-                    </div>
-
-                    <div class="filter-group">
-                        <label for="page-size">Items por página</label>
-                        <select id="page-size">
-                            <option value="10">10</option>
-                            <option value="25">25</option>
-                            <option value="50">50</option>
-                            <option value="100">100</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="filter-actions">
-                    <button onclick="aplicarFiltros()" class="btn btn-primary">Aplicar Filtros</button>
-                    <button onclick="limpiarFiltros()" class="btn btn-secondary">Limpiar Filtros</button>
-                </div>
+            <div class="filter-actions">
+                <button onclick="buscarPacientes()" class="btn btn-primary">Buscar Pacientes</button>
+                <button onclick="limpiarBusqueda()" class="btn btn-secondary">Limpiar</button>
             </div>
         </div>
 
         <!-- Tabla de pacientes -->
         <div class="card">
-            <?php if (empty($pacientes)): ?>
+            <?php if (empty($pacientes) && (empty($busqueda) && empty($filtroEstrato))): ?>
+                <div class="no-results">
+                    <div class="no-results-icon">🔍</div>
+                    <p>Utilice los filtros de búsqueda para encontrar pacientes</p>
+                </div>
+            <?php elseif (empty($pacientes)): ?>
                 <div class="no-results">
                     <div class="no-results-icon">🔍</div>
                     <p>No se encontraron pacientes<?= $busqueda ? " con el término \"$busqueda\"" : '' ?></p>
@@ -241,55 +239,53 @@ try {
                 pagination.setItemsPerPage(this.value);
             });
 
-            // Event listener para búsqueda en tiempo real
+            // Búsqueda en tiempo real
+            let timeoutId;
             document.getElementById('search-input').addEventListener('input', function() {
-                const searchText = this.value;
-                pagination.applyFilter(item => 
-                    FilterUtils.byText(item, searchText, ['primer_nombre', 'segundo_nombre', 'primer_apellido', 'segundo_apellido', 'documento_id'])
-                );
+                clearTimeout(timeoutId);
+                const searchText = this.value.trim();
+                
+                if (searchText.length >= 2) {
+                    timeoutId = setTimeout(() => {
+                        const url = window.location.pathname + '?buscar=' + encodeURIComponent(searchText);
+                        window.location.href = url;
+                    }, 500);
+                } else if (searchText.length === 0) {
+                    window.location.href = window.location.pathname;
+                }
+            });
+            
+            document.getElementById('filter-estrato').addEventListener('change', function() {
+                if (this.value) {
+                    buscarPacientes();
+                }
             });
         });
 
-        function toggleFilters() {
-            const panel = document.getElementById('filter-panel');
-            const text = document.getElementById('filter-toggle-text');
-            
-            if (panel.style.display === 'none') {
-                panel.style.display = 'block';
-                text.textContent = 'Ocultar filtros';
-            } else {
-                panel.style.display = 'none';
-                text.textContent = 'Mostrar filtros';
-            }
-        }
-
-        function aplicarFiltros() {
+function buscarPacientes() {
             const searchText = document.getElementById('search-input').value;
             const estrato = document.getElementById('filter-estrato').value;
-
-            pagination.applyFilter(item => {
-                let matches = true;
-
-                // Filtro de búsqueda
-                if (searchText) {
-                    matches = matches && FilterUtils.byText(item, searchText, 
-                        ['primer_nombre', 'segundo_nombre', 'primer_apellido', 'segundo_apellido', 'documento_id']
-                    );
-                }
-
-                // Filtro de estrato
-                if (estrato) {
-                    matches = matches && FilterUtils.bySelect(item, estrato, 'estrato');
-                }
-
-                return matches;
-            });
+            
+            let url = window.location.pathname + '?';
+            const params = [];
+            
+            if (searchText.trim()) {
+                params.push('buscar=' + encodeURIComponent(searchText.trim()));
+            }
+            
+            if (estrato) {
+                params.push('estrato=' + encodeURIComponent(estrato));
+            }
+            
+            if (params.length > 0) {
+                url += params.join('&');
+            }
+            
+            window.location.href = url;
         }
 
-        function limpiarFiltros() {
-            document.getElementById('search-input').value = '';
-            document.getElementById('filter-estrato').value = '';
-            pagination.resetFilter();
+        function limpiarBusqueda() {
+            window.location.href = window.location.pathname;
         }
 
         function exportarPacientes() {

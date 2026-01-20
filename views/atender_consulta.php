@@ -12,6 +12,7 @@ use App\FormulaMedica;
 use App\Procedimiento;
 use App\SignosVitales;
 use App\ReferenceData;
+use App\Medico;
 use Dotenv\Dotenv;
 
 $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
@@ -24,6 +25,9 @@ $formulaModel = new FormulaMedica($supabase);
 $procModel = new Procedimiento($supabase);
 $signosModel = new SignosVitales($supabase);
 $refData = new ReferenceData($supabase);
+
+// Inicializar variables
+$error = null;
 
 // Obtener lista de medicamentos para el select
 $medicamentosList = $refData->getMedicamentos();
@@ -43,9 +47,18 @@ if ($cita_id && !$id_consulta) {
         if (!empty($citas)) {
             $cita = $citas[0];
             
+            // Obtener el ID del perfil del médico desde user_id
+            $medicoModel = new Medico($supabase);
+            $perfilMedico = $medicoModel->obtenerPorUserId($cita['medico_id']);
+            
+            if (!$perfilMedico) {
+                die("Error: El médico no tiene un perfil vinculado.");
+            }
+            
+            $medico_perfil_id = $perfilMedico['id'];
+            
             // 2. Buscar si ya existe una consulta PENDIENTE para este paciente/medico
-            // Idealmente deberíamos tener un link directo, pero lo inferimos.
-            $cons = $supabase->select('consultas', '*', "id_paciente=eq.{$cita['paciente_id']}&medico_id=eq.{$cita['medico_id']}&estado=eq.pendiente");
+            $cons = $supabase->select('consultas', '*', "id_paciente=eq.{$cita['paciente_id']}&medico_id=eq.$medico_perfil_id&estado=eq.pendiente");
             
             if (!empty($cons)) {
                 // Ya existe, usamos esa
@@ -54,7 +67,7 @@ if ($cita_id && !$id_consulta) {
                 // 3. No existe, creamos una nueva consulta automáticamente
                 $datosNueva = [
                     'id_paciente' => $cita['paciente_id'],
-                    'medico_id' => $cita['medico_id'],
+                    'medico_id' => $medico_perfil_id,
                     'motivo_consulta' => $cita['motivo_consulta'],
                     'enfermedad_actual' => 'Generado desde Cita #' . $cita_id,
                     'estado' => 'pendiente'
@@ -177,6 +190,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // 5. Cerrar Consulta
         $consultaModel->cambiarEstado($id_consulta, 'finalizada');
+        
+        // 6. Marcar la cita como atendida (si vino desde una cita)
+        if ($cita_id) {
+            $supabase->update('citas', ['estado' => 'atendida'], "id=eq.$cita_id");
+        }
         
         // 6. Mostrar mensaje de éxito y opciones
         ?>

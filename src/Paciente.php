@@ -105,14 +105,14 @@ class Paciente extends BaseModel
     }
 
     /**
-     * Buscar pacientes por nombre
+     * Buscar pacientes por nombre, apellidos o documento
      */
-    public function buscarPorNombre($nombre)
+    public function buscarPorNombre($termino)
     {
         try {
-            $nombre = $this->validator->sanitize($nombre);
-            // Buscar en primer nombre o primer apellido
-            $filter = "or=(primer_nombre.ilike.*{$nombre}*,primer_apellido.ilike.*{$nombre}*)";
+            $termino = $this->validator->sanitize($termino);
+            // Buscar en nombres, apellidos y documento
+            $filter = "or=(primer_nombre.ilike.*{$termino}*,segundo_nombre.ilike.*{$termino}*,primer_apellido.ilike.*{$termino}*,segundo_apellido.ilike.*{$termino}*,documento_id.ilike.*{$termino}*)";
             return $this->supabase->select('pacientes', '*', $filter, 'primer_nombre.asc');
         } catch (\Exception $e) {
             throw new \Exception("Error al buscar pacientes: " . $e->getMessage());

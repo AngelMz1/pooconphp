@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // Obtener citas (pendientes y atendidas del futuro/hoy)
 // Filtrar por estado pendiente para "Por atender"
-$citas_pendientes = $supabase->select('citas', '*, pacientes(*)', ($filter ? "$filter," : "") . "estado.eq.pendiente", 'fecha_hora.asc');
+$citas_pendientes = $supabase->select('citas', '*, pacientes(*)', ($filter ? "$filter&" : "") . "estado=eq.pendiente", 'fecha_hora.asc');
 
 ?>
 <!DOCTYPE html>
