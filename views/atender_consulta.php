@@ -47,12 +47,23 @@ if ($cita_id && !$id_consulta) {
         if (!empty($citas)) {
             $cita = $citas[0];
             
-            // Obtener el ID del perfil del médico desde user_id
+            // Obtener el ID del perfil del médico
+            // Primero intentar desde la cita, si no, usar el médico logueado
             $medicoModel = new Medico($supabase);
-            $perfilMedico = $medicoModel->obtenerPorUserId($cita['medico_id']);
+            $perfilMedico = null;
+            
+            // Intentar obtener médico de la cita
+            if (!empty($cita['medico_id'])) {
+                $perfilMedico = $medicoModel->obtenerPorUserId($cita['medico_id']);
+            }
+            
+            // Si no hay médico en la cita, usar el médico logueado
+            if (!$perfilMedico && !empty($_SESSION['user_id'])) {
+                $perfilMedico = $medicoModel->obtenerPorUserId($_SESSION['user_id']);
+            }
             
             if (!$perfilMedico) {
-                die("Error: El médico no tiene un perfil vinculado.");
+                die("Error: No se encontró el perfil del médico. Asegúrese de que su usuario esté vinculado a un perfil de médico.");
             }
             
             $medico_perfil_id = $perfilMedico['id'];

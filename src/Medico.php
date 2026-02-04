@@ -55,6 +55,11 @@ class Medico extends BaseModel
      */
     public function obtenerPorUserId($user_id)
     {
+        // Validar que user_id no esté vacío
+        if (empty($user_id)) {
+            return null;
+        }
+        
         try {
             $resultado = $this->supabase->select('medicos', '*', "user_id=eq.$user_id");
             return !empty($resultado) ? $resultado[0] : null;

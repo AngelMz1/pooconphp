@@ -224,16 +224,15 @@ while ($start <= $end) {
                     </div>
 
                     <div class="form-group" style="flex: 1;">
-                        <label>Médico</label>
+                        <label>Médico <span style="color: red;">*</span></label>
                         <select name="medico_id" required>
-                            <option value="">Seleccione Médico...</option>
+                            <option value="">-- Seleccione Médico --</option>
                             <?php foreach($medicos as $m): 
-                                $uid = $m['user_id'] ?? '';
-                                $disabled = empty($uid) ? 'disabled' : '';
-                                $suffix = empty($uid) ? ' (Sin Usuario Vinculado - Contacte Admin)' : '';
+                                // Solo mostrar médicos con user_id vinculado
+                                if (empty($m['user_id'])) continue;
                             ?>
-                                <option value="<?= $uid ?>" <?= $disabled ?>>
-                                    Dr. <?= $m['primer_nombre'] ?> <?= $m['primer_apellido'] . $suffix ?>
+                                <option value="<?= $m['user_id'] ?>">
+                                    Dr. <?= $m['primer_nombre'] ?> <?= $m['primer_apellido'] ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>

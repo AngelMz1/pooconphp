@@ -74,6 +74,26 @@ if (($esMedico || $esAdmin) && isset($_SESSION['user_id'])) {
         // Manejar error silenciosamente o loguear
     }
 }
+
+// Obtener citas pendientes (igual que calendario_citas.php)
+$citasPendientes = 0;
+$citasPendientesData = []; // Lista de citas para mostrar
+if (($esMedico || $esAdmin) && isset($_SESSION['user_id']) && isset($supabase)) {
+    try {
+        $medico_id = $_SESSION['user_id'];
+        
+        if ($esAdmin) {
+            // Admin ve todas las citas pendientes
+            $citasPendientesData = $supabase->select('citas', '*, pacientes(*)', "estado=eq.pendiente", 'fecha_hora.asc');
+        } else {
+            // Médico solo ve las suyas (usar .eq. no =eq.)
+            $citasPendientesData = $supabase->select('citas', '*, pacientes(*)', "medico_id.eq.$medico_id&estado=eq.pendiente", 'fecha_hora.asc');
+        }
+        $citasPendientes = is_array($citasPendientesData) ? count($citasPendientesData) : 0;
+    } catch (Exception $e) {
+        // Silenciar error
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -106,26 +126,33 @@ if (($esMedico || $esAdmin) && isset($_SESSION['user_id'])) {
                     <!-- Panel Específico de Médico -->
                     <div class="card mb-4 fade-in">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                            <h2>🩺 Mis Consultas Pendientes</h2>
-                            <span class="badge badge-primary"><?= count($consultasPendientes) ?> Pendientes</span>
+                            <h2>🩺 Mis Citas Pendientes</h2>
+                            <span class="badge badge-primary"><?= $citasPendientes ?> Pendientes</span>
                         </div>
 
-                        <?php if (empty($consultasPendientes)): ?>
+                        <?php if (empty($citasPendientesData)): ?>
                             <div class="alert alert-success">
-                                ✅ No tienes pacientes en espera en este momento.
+                                ✅ No tienes citas pendientes en este momento.
                             </div>
                         <?php else: ?>
                             <div class="grid grid-3">
-                                <?php foreach ($consultasPendientes as $consulta): ?>
+                                <?php foreach ($citasPendientesData as $cita): 
+                                    $paciente = $cita['pacientes'] ?? [];
+                                    $fechaHora = new DateTime($cita['fecha_hora']);
+                                ?>
                                     <div class="card" style="border-left: 5px solid var(--primary);">
-                                        <h3><?= htmlspecialchars($consulta['pacientes']['primer_nombre'] . ' ' . $consulta['pacientes']['primer_apellido']) ?></h3>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                            <strong style="color: var(--primary);"><?= $fechaHora->format('h:i A') ?></strong>
+                                            <span class="badge badge-secondary"><?= $fechaHora->format('d/m/Y') ?></span>
+                                        </div>
+                                        <h3><?= htmlspecialchars(($paciente['primer_nombre'] ?? '') . ' ' . ($paciente['primer_apellido'] ?? '')) ?></h3>
                                         <p style="color: var(--gray-600); font-size: 0.9rem;">
-                                            🆔 <?= htmlspecialchars($consulta['pacientes']['documento_id']) ?>
+                                            🆔 <?= htmlspecialchars($paciente['documento_id'] ?? 'N/A') ?>
                                         </p>
                                         <hr style="margin: 0.5rem 0; opacity: 0.2;">
-                                        <p><strong>Motivo:</strong><br><?= htmlspecialchars(substr($consulta['motivo_consulta'], 0, 50)) ?>...</p>
+                                        <p><strong>Motivo:</strong><br><?= htmlspecialchars(substr($cita['motivo_consulta'] ?? '', 0, 50)) ?>...</p>
                                         <div style="margin-top: 1rem;">
-                                            <a href="views/atender_consulta.php?id=<?= $consulta['id_consulta'] ?>" class="btn btn-primary btn-sm" style="display: block; text-align: center;">
+                                            <a href="views/atender_consulta.php?cita_id=<?= $cita['id'] ?>" class="btn btn-primary btn-sm" style="display: block; text-align: center;">
                                                 Atender Paciente ➡️
                                             </a>
                                         </div>
@@ -151,9 +178,9 @@ if (($esMedico || $esAdmin) && isset($_SESSION['user_id'])) {
                     </div>
                     
                     <div class="stat-card">
-                        <div class="stat-icon">✅</div>
-                        <div class="stat-value">100%</div>
-                        <div class="stat-label">Sistema Activo</div>
+                        <div class="stat-icon">📅</div>
+                        <div class="stat-value"><?= $citasPendientes ?></div>
+                        <div class="stat-label">Citas Pendientes</div>
                     </div>
                 </div>
 

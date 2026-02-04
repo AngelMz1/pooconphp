@@ -59,6 +59,12 @@ class Paciente extends BaseModel
             throw new \Exception("Datos inválidos: " . implode(", ", $this->validator->getErrors()));
         }
 
+        // Verificar si el documento ya existe
+        $existente = $this->buscarPorDocumento($datos['documento_id']);
+        if ($existente) {
+            throw new \Exception("Ya existe un paciente registrado con el documento {$datos['documento_id']}. Por favor, busque el paciente existente o use un documento diferente.");
+        }
+
         // Sanitizar datos
         $datosSanitizados = $this->sanitizarDatos($datos);
 
@@ -66,6 +72,10 @@ class Paciente extends BaseModel
             $resultado = $this->supabase->insert('pacientes', $datosSanitizados);
             return $resultado;
         } catch (\Exception $e) {
+            // Capturar error de duplicado por si acaso (race condition)
+            if (strpos($e->getMessage(), '23505') !== false || strpos($e->getMessage(), 'duplicate') !== false) {
+                throw new \Exception("Ya existe un paciente registrado con este documento. Por favor, busque el paciente existente.");
+            }
             throw new \Exception("Error al crear paciente: " . $e->getMessage());
         }
     }
