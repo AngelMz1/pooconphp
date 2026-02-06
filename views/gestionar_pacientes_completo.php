@@ -1,4 +1,8 @@
 <?php
+require_once __DIR__ . '/../includes/auth_helper.php';
+
+// Verificar permiso para gestionar pacientes
+requirePermission('gestionar_pacientes');
 require_once '../vendor/autoload.php';
 
 use App\SupabaseClient;
@@ -295,9 +299,9 @@ if (isset($_GET['success']) && !$error) {
 
                         <div class="form-group">
                             <label for="ocupacion">Ocupación</label>
-                            <input type="text" name="ocupacion" id="ocupacion" maxlength="1"
+                            <input type="text" name="ocupacion" id="ocupacion" maxlength="100"
                                    value="<?= $isEdit ? htmlspecialchars($paciente['ocupacion'] ?? '') : '' ?>">
-                            <small class="help-text">Un carácter</small>
+                            <small class="help-text">Profesión u ocupación del paciente</small>
                         </div>
                     </div>
 

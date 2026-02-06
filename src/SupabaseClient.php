@@ -4,11 +4,12 @@ namespace App;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
+use App\Interfaces\DatabaseAdapterInterface;
 
 /**
  * Cliente mejorado para interactuar con la API de Supabase
  */
-class SupabaseClient
+class SupabaseClient implements DatabaseAdapterInterface
 {
     private $client;
     private $baseUrl;
@@ -270,5 +271,16 @@ class SupabaseClient
         }
         
         throw new \Exception($errorMessage);
+    }
+
+    /**
+     * Execute a raw query (Simulated or via RPC if supported)
+     */
+    public function query($sql, $params = [])
+    {
+        // Supabase REST API doesn't support raw SQL directly. 
+        // We could map to RPC functions, but for now we throw specific exception or return empty.
+        // If this is called, code structure should probably be using LocalAdapter or RPC.
+        throw new \Exception("Raw SQL query not supported via Supabase Client REST API.");
     }
 }

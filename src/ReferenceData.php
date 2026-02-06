@@ -3,6 +3,7 @@
 namespace App;
 
 use App\SupabaseClient;
+use App\Interfaces\DatabaseAdapterInterface;
 
 /**
  * Clase helper para obtener datos de tablas de referencia
@@ -12,7 +13,7 @@ class ReferenceData
     private $supabase;
     private $cache = [];
 
-    public function __construct(SupabaseClient $supabase)
+    public function __construct(DatabaseAdapterInterface $supabase)
     {
         $this->supabase = $supabase;
         if (session_status() === PHP_SESSION_NONE) {

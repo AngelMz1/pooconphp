@@ -59,10 +59,7 @@ function logout() {
  * Verifica si el usuario tiene un permiso específico.
  */
 function hasPermission($permission) {
-    // Si es admin tiene todo (opcional, pero útil para evitar configurar todo manualmente)
-    if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin') {
-        return true; 
-    }
+    // Todos los usuarios deben tener permisos explícitos (incluido admin)
     
     if (!isset($_SESSION['permissions']) || !is_array($_SESSION['permissions'])) {
         return false;
@@ -82,4 +79,3 @@ function requirePermission($permission) {
         die("⛔ Acceso Denegado: No tienes permiso para realizar esta acción ($permission).");
     }
 }
-?>

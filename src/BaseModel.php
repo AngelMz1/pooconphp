@@ -2,7 +2,8 @@
 
 namespace App;
 
-use App\SupabaseClient;
+use App\Interfaces\DatabaseAdapterInterface;
+use App\DatabaseFactory;
 use App\Validator;
 
 /**
@@ -10,28 +11,17 @@ use App\Validator;
  */
 abstract class BaseModel
 {
-    protected $supabase;
+    /** @var DatabaseAdapterInterface */
+    protected $supabase; // Keeping name $supabase for backward compat in child classes, but type is generic
     protected $validator;
 
-    public function __construct(?SupabaseClient $supabase = null)
+    public function __construct(?DatabaseAdapterInterface $db = null)
     {
-        if (!$supabase) {
-            // Load env if not loaded (generic check)
-            if (!isset($_ENV['SUPABASE_URL'])) {
-                $dotenv = \Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
-                try {
-                   $dotenv->safeLoad();
-                } catch (\Exception $e) { }
-            }
-            
-            $url = $_ENV['SUPABASE_URL'] ?? $_SERVER['SUPABASE_URL'] ?? getenv('SUPABASE_URL');
-            $key = $_ENV['SUPABASE_KEY'] ?? $_SERVER['SUPABASE_KEY'] ?? getenv('SUPABASE_KEY');
-            
-            if ($url && $key) {
-                $supabase = new SupabaseClient($url, $key);
-            }
+        if (!$db) {
+            $this->supabase = DatabaseFactory::create();
+        } else {
+            $this->supabase = $db;
         }
-        $this->supabase = $supabase;
         $this->validator = new Validator();
     }
 }

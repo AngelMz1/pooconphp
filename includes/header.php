@@ -97,7 +97,7 @@
 
     <div class="nav-brand">
         <button class="mobile-menu-toggle" id="menu-toggle">
-            ☰
+            <?= getIcon('menu') ?>
         </button>
         <?php if (!empty($sysConfig['logo_url'])): ?>
             <img src="<?php echo htmlspecialchars($sysConfig['logo_url']); ?>" alt="Logo" style="height: 30px; margin-right: 10px;">
@@ -140,7 +140,7 @@
         </div>
         
         <a href="<?= $basePath ?>views/logout.php" class="btn btn-sm btn-danger" style="margin-left: 1rem; padding: 0.25rem 0.5rem;" title="Cerrar Sesión">
-            🚪
+            <?= getIcon('logout') ?>
         </a>
     </div>
 

@@ -6,7 +6,7 @@
 require_once '../vendor/autoload.php';
 require_once '../includes/auth_helper.php';
 
-requireLogin();
+requirePermission('ver_historia'); // Verificar permiso para ver historias (imprimir)
 
 use App\SupabaseClient;
 use App\HistoriaClinica;

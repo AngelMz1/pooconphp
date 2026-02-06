@@ -1,0 +1,279 @@
+<?php
+require_once '../vendor/autoload.php';
+require_once '../includes/auth_helper.php';
+
+requireLogin();
+
+use App\DatabaseFactory;
+use App\Facturacion;
+use Dotenv\Dotenv;
+
+$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
+try {
+    $dotenv->safeLoad();
+} catch (Exception $e) { }
+
+$db = DatabaseFactory::create();
+$facturacionModel = new Facturacion($db);
+
+$facturaId = $_GET['factura_id'] ?? null;
+$historiaId = $_GET['historia_id'] ?? null;
+
+if (!$facturaId) {
+    header("Location: ../index.php");
+    exit;
+}
+
+// Obtener factura completa con items y datos del paciente
+$factura = $facturacionModel->obtenerFactura($facturaId);
+
+if (!$factura) {
+    die("Factura no encontrada");
+}
+
+// Obtener datos del paciente
+$pacienteData = $db->select('pacientes', '*', "id_paciente=eq.{$factura['paciente_id']}");
+$paciente = $pacienteData[0] ?? null;
+
+// Obtener EPS del paciente
+$eps = null;
+if (!empty($paciente['eps_id'])) {
+    $epsData = $db->select('eps', 'nombre_eps,regimen', "id=eq.{$paciente['eps_id']}");
+    $eps = $epsData[0] ?? null;
+}
+
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Resumen de Facturación - Sistema Médico</title>
+    <link rel="stylesheet" href="../assets/css/styles.css">
+    <style>
+        .billing-summary {
+            max-width: 900px;
+            margin: 2rem auto;
+        }
+        
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+        
+        .invoice-table th,
+        .invoice-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        
+        .invoice-table th {
+            background: var(--gray-100);
+            font-weight: 600;
+        }
+        
+        .invoice-table tfoot td {
+            font-weight: 600;
+            border-top: 2px solid var(--gray-300);
+        }
+        
+        .total-row {
+            background: var(--primary-light);
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .status-pendiente {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-pagada {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .info-item strong {
+            display: block;
+            color: var(--gray-600);
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .actions-container {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 2px solid var(--gray-200);
+        }
+    </style>
+</head>
+<body class="dashboard-container">
+    <?php include '../includes/sidebar.php'; ?>
+    <?php include '../includes/header.php'; ?>
+    
+    <main class="main-content">
+        <div class="billing-summary">
+            <div class="card">
+                <div class="success-header" style="text-align: center; padding: 2rem; background: linear-gradient(135deg, var(--success-light), var(--success)); color: white; border-radius: 8px 8px 0 0;">
+                    <h1 style="margin: 0; font-size: 2rem;">✅ Consulta Finalizada</h1>
+                    <p style="margin: 0.5rem 0 0 0; opacity: 0.9;">La historia clínica ha sido guardada exitosamente</p>
+                </div>
+
+                <div style="padding: 2rem;">
+                    <!-- Información del Paciente y Factura -->
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <strong>Paciente</strong>
+                            <div><?= htmlspecialchars($paciente['primer_nombre'] . ' ' . $paciente['primer_apellido']) ?></div>
+                            <small>CC <?= htmlspecialchars($paciente['documento_id']) ?></small>
+                        </div>
+                        <div class="info-item">
+                            <strong>EPS / Régimen</strong>
+                            <div><?= $eps ? htmlspecialchars($eps['nombre_eps']) : 'Particular' ?></div>
+                            <?php if ($eps): ?>
+                                <small><?= htmlspecialchars($eps['regimen']) ?></small>
+                            <?php endif; ?>
+                        </div>
+                        <div class="info-item">
+                            <strong>Factura No.</strong>
+                            <div style="font-size: 1.25rem; font-weight: 600;">#<?= str_pad($factura['id'], 6, '0', STR_PAD_LEFT) ?></div>
+                            <small><?= date('d/m/Y H:i', strtotime($factura['fecha'])) ?></small>
+                        </div>
+                        <div class="info-item">
+                            <strong>Estado</strong>
+                            <div>
+                                <span class="status-badge status-<?= $factura['estado'] ?>">
+                                    <?= $factura['estado'] === 'pendiente' ? '🟡 Pendiente de Pago' : '🟢 Pagada' ?>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detalle de Servicios -->
+                    <h2 style="margin-top: 2rem;">💰 Detalle de Facturación</h2>
+                    
+                    <table class="invoice-table">
+                        <thead>
+                            <tr>
+                                <th>Concepto</th>
+                                <th style="text-align: center;">Cantidad</th>
+                                <th style="text-align: right;">Precio Unit.</th>
+                                <th style="text-align: right;">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($factura['items'] as $item): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($item['concepto']) ?></td>
+                                    <td style="text-align: center;"><?= $item['cantidad'] ?></td>
+                                    <td style="text-align: right;">$<?= number_format($item['precio_unitario'], 0, ',', '.') ?></td>
+                                    <td style="text-align: right;">$<?= number_format($item['subtotal'], 0, ',', '.') ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                        <tfoot>
+                            <?php if ($factura['subtotal'] > 0): ?>
+                                <tr>
+                                    <td colspan="3" style="text-align: right;">SUBTOTAL:</td>
+                                    <td style="text-align: right;">$<?= number_format($factura['subtotal'], 0, ',', '.') ?></td>
+                                </tr>
+                            <?php endif; ?>
+                            
+                            <?php if ($factura['copago'] > 0): ?>
+                                <tr>
+                                    <td colspan="3" style="text-align: right;">Copago EPS (<?= number_format(($factura['copago'] / $factura['subtotal']) * 100, 0) ?>%):</td>
+                                    <td style="text-align: right; color: var(--success);">-$<?= number_format($factura['copago'], 0, ',', '.') ?></td>
+                                </tr>
+                            <?php endif; ?>
+                            
+                            <?php if ($factura['descuento'] > 0): ?>
+                                <tr>
+                                    <td colspan="3" style="text-align: right;">Descuento:</td>
+                                    <td style="text-align: right; color: var(--success);">-$<?= number_format($factura['descuento'], 0, ',', '.') ?></td>
+                                </tr>
+                            <?php endif; ?>
+                            
+                            <tr class="total-row">
+                                <td colspan="3" style="text-align: right; font-size: 1.25rem;">TOTAL A PAGAR:</td>
+                                <td style="text-align: right; font-size: 1.5rem;">$<?= number_format($factura['total'], 0, ',', '.') ?></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <?php if ($factura['copago'] > 0 && $factura['copago'] == $factura['subtotal']): ?>
+                        <div class="alert alert-info">
+                            ℹ️ <strong>Copago cubierto por EPS.</strong> El paciente NO debe pagar nada.
+                        </div>
+                    <?php elseif ($factura['total'] > 0): ?>
+                        <div class="alert alert-warning">
+                            ⚠️ <strong>Total a cobrar al paciente:</strong> $<?= number_format($factura['total'], 0, ',', '.') ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- Documentos Médicos -->
+                    <div style="margin-top: 2rem; padding: 1.5rem; background: var(--bg-secondary); border-radius: 8px;">
+                        <h3 style="margin-top: 0;">📂 Documentos Generados</h3>
+                        <div class="flex gap-2 flex-wrap">
+                            <a href="imprimir_historia.php?id=<?= $historiaId ?>" class="btn btn-outline" target="_blank">
+                                🖨️ Historia Clínica
+                            </a>
+                            <a href="imprimir_formula.php?id_historia=<?= $historiaId ?>" class="btn btn-outline" target="_blank">
+                                💊 Fórmula Médica
+                            </a>
+                            <a href="imprimir_solicitud.php?id_historia=<?= $historiaId ?>" class="btn btn-outline" target="_blank">
+                                🔬 Solicitudes/Órdenes
+                            </a>
+                            <a href="imprimir_factura.php?id=<?= $facturaId ?>" class="btn btn-primary" target="_blank">
+                                📄 Factura
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Acciones -->
+                    <div class="actions-container">
+                        <?php if ($factura['estado'] === 'pendiente' && $factura['total'] > 0): ?>
+                            <a href="registrar_pago.php?factura_id=<?= $facturaId ?>" class="btn btn-success btn-lg">
+                                💳 Registrar Pago
+                            </a>
+                        <?php else: ?>
+                            <div class="alert alert-success" style="margin: 0;">
+                                ✅ <strong>Factura ya está pagada</strong>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <a href="calendario_citas.php" class="btn btn-secondary btn-lg">
+                            🗓️ Volver al Calendario
+                        </a>
+                        
+                        <a href="listar_facturas.php" class="btn btn-outline btn-lg">
+                            📋 Ver Todas las Facturas
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

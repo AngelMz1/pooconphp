@@ -2,15 +2,21 @@
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../includes/auth_helper.php';
 
-// Solo medicos y admins
-requireRole(['medico', 'admin']);
+// Verificar permiso de ver calendario
+if (!hasPermission('ver_todas_citas')) {
+    die('<h1>Acceso Denegado</h1><p>No tiene permisos para ver el calendario de citas.</p>');
+}
 
-use App\SupabaseClient;
+use App\DatabaseFactory;
+use App\Medico;
 use Dotenv\Dotenv;
 
 $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->load();
-$supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
+try {
+    $dotenv->safeLoad();
+} catch (Exception $e) { }
+
+$supabase = DatabaseFactory::create();
 
 $medico_id = $_SESSION['user_id'];
 $rol = $_SESSION['user_role'];

@@ -2,19 +2,21 @@
 require_once '../vendor/autoload.php';
 require_once '../includes/auth_helper.php';
 
-use App\SupabaseClient;
+use App\DatabaseFactory;
 use App\Configuracion;
 use Dotenv\Dotenv;
 
 $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->load();
+try {
+    $dotenv->safeLoad();
+} catch (Exception $e) { }
+
+$supabase = DatabaseFactory::create();
+$configModel = new Configuracion($supabase);
+$mensaje = '';
 
 requireLogin();
 requireRole('admin');
-
-$supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
-$configuracion = new Configuracion($supabase);
-$mensaje = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nombre = $_POST['nombre_institucion'] ?? '';

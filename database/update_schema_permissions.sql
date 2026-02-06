@@ -18,7 +18,7 @@ ALTER TABLE user_permissions ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Public read permissions" ON permissions FOR SELECT USING (true);
 CREATE POLICY "Public read user_permissions" ON user_permissions FOR SELECT USING (true);
-CREATE POLICY "Admin write permissions" ON permissions FOR ALL USING (auth.role() = 'service_role'); -- Simplificado
+CREATE POLICY "Admin write permissions" ON permissions FOR ALL USING (true); -- Simplificado para local
 
 -- Insertar Permisos Básicos
 INSERT INTO permissions (name, description) VALUES 

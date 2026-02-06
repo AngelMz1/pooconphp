@@ -2,10 +2,15 @@
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../includes/auth_helper.php';
 
-// Solo cajeros y admins
-requireRole(['cajero', 'admin']);
+// Verificar permiso de gestionar citas (facturador o admin)
+if (!hasPermission('agendar_citas') && !hasPermission('ver_todas_citas')) {
+    die('<h1>Acceso Denegado</h1><p>No tiene permisos para gestionar citas.</p>');
+}
 
+use App\DatabaseFactory;
 use App\SupabaseClient;
+use App\Medico;
+use App\Paciente;
 use Dotenv\Dotenv;
 
 // Debugging 500
@@ -14,8 +19,13 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->load();
-$supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
+try {
+    $dotenv->safeLoad();
+} catch (Exception $e) { }
+
+$supabase = DatabaseFactory::create();
+$medicoModel = new Medico($supabase);
+$pacienteModel = new Paciente($supabase);
 
 // --- Auto-Cancelación de Citas Vencidas ---
 try {
@@ -57,12 +67,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     // Combinar Fecha y Hora
     $fecha_post = $_POST['fecha_cita'];
     $hora_post = $_POST['hora_cita'];
-    $fecha_hora = $fecha_post . ' ' . $hora_post; // YYYY-MM-DD HH:MM para Insert
-    $fecha_hora_iso = $fecha_post . 'T' . $hora_post . ':00'; // Formato ISO para Consultas GET
+    
+    // Formato estándar BD (YYYY-MM-DD HH:MM:SS)
+    $fecha_hora_bd = $fecha_post . ' ' . $hora_post . ':00'; 
+    
+    // Formato ISO para filtros (algunos adaptadores lo prefieren)
+    // Pero LocalPostgresAdapter usa PDO directo, así que el formato string DB es mejor
+    $fecha_hora_filter = $fecha_hora_bd;
 
     $motivo = $_POST['motivo'];
 
-        $dateObj = new DateTime($fecha_hora);
+        $dateObj = new DateTime($fecha_hora_bd);
         $hour = (int)$dateObj->format('H');
         $min = (int)$dateObj->format('i');
         $dayOfWeek = (int)$dateObj->format('w'); // 0 (Sun) - 6 (Sat)
@@ -83,8 +98,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         // 3. Validar Disponibilidad del Médico (Mismo día y hora)
         // state != cancelada
-        // IMPORTANTE: Usar formato ISO y asegurarnos que medico_id no sea nulo
-        $existing = $supabase->select('citas', 'id', "medico_id=eq.$medico_id&fecha_hora=eq.$fecha_hora_iso&estado=neq.cancelada");
+        // Usamos formato compatible con SQL local
+        $existing = $supabase->select('citas', 'id', "medico_id=eq.$medico_id&fecha_hora=eq.$fecha_hora_filter&estado=neq.cancelada");
         if (!empty($existing)) {
             throw new Exception("El médico ya tiene una cita agendada en ese horario.");
         }
@@ -110,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $data = [
             'paciente_id' => $paciente_id,
             'medico_id' => $medico_id,
-            'fecha_hora' => $fecha_hora,
+            'fecha_hora' => $fecha_hora_bd,
             'motivo_consulta' => $motivo,
             'estado' => 'por_confirmar' // Nuevo estado inicial
         ];
@@ -168,7 +183,33 @@ try {
     // Cambiamos a '*' para asegurar que no falla por nombres de columna incorrectos
     $medicos = $supabase->select('medicos', '*'); 
     $pacientes = $supabase->select('pacientes', 'id_paciente, primer_nombre, primer_apellido, documento_id');
-    $citas = $supabase->select('citas', '*, pacientes(primer_nombre, primer_apellido, documento_id), users(nombre_completo)', null, 'fecha_hora.asc', 50);
+    
+    // Obtener citas (sin JOIN porque LocalPostgresAdapter no lo soporta)
+    $citas = $supabase->select('citas', '*', null, 'fecha_hora.asc', 50);
+    
+    // Hacer JOIN manual en PHP
+    // Crear índices por ID para búsqueda rápida
+    $pacientesById = [];
+    foreach ($pacientes as $p) {
+        $pacientesById[$p['id_paciente']] = $p;
+    }
+    
+    $usuariosById = [];
+    try {
+        $usuarios = $supabase->select('users', 'id, nombre_completo');
+        foreach ($usuarios as $u) {
+            $usuariosById[$u['id']] = $u;
+        }
+    } catch (Exception $e) {
+        // Si falla, continue with empty users
+    }
+    
+    // Agregar datos de paciente y médico a cada cita
+    foreach ($citas as &$cita) {
+        $cita['pacientes'] = $pacientesById[$cita['paciente_id']] ?? ['primer_nombre' => '?', 'primer_apellido' => '?'];
+        $cita['users'] = $usuariosById[$cita['medico_id']] ?? ['nombre_completo' => '?'];
+    }
+    unset($cita); // Romper referencia
 } catch (Throwable $e) {
     die("<h1>Error Crítico</h1><pre>" . $e->getMessage() . "\n" . $e->getTraceAsString() . "</pre>");
 }

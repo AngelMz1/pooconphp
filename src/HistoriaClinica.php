@@ -158,6 +158,49 @@ class HistoriaClinica extends BaseModel
     }
 
     /**
+     * Buscar historias por término general (diagnóstico, motivo o documento del paciente)
+     */
+    public function buscarGeneral($termino)
+    {
+        try {
+            $termino = $this->validator->sanitize($termino);
+            
+            // 1. Buscar coincidencia en documentos de pacientes
+            $filterIds = '';
+            try {
+                // Buscamos pacientes cuyo documento contenga el término
+                // Nota: Usamos select directo a la tabla pacientes
+                $pacientes = $this->supabase->select('pacientes', 'id_paciente', "documento_id.ilike.*{$termino}*");
+                
+                if (!empty($pacientes)) {
+                    $ids = array_column($pacientes, 'id_paciente');
+                    // Limitar a una cantidad razonable para evitar URLs gigantes
+                    $ids = array_slice($ids, 0, 50); 
+                    if (!empty($ids)) {
+                        $idsStr = implode(',', $ids);
+                        $filterIds = ",id_paciente.in.($idsStr)";
+                    }
+                }
+            } catch (\Exception $e) {
+                // Si falla la búsqueda de pacientes, ignoramos y seguimos con texto
+            }
+
+            // 2. Construir filtro combinadocon OR
+            // Supabase PostgREST 'or' syntax: or=(cond1,cond2,cond3)
+            $filter = "or=(diagnostico.ilike.*{$termino}*,motivo_consulta.ilike.*{$termino}*{$filterIds})";
+            
+            return $this->supabase->select(
+                'historias_clinicas',
+                '*, pacientes:id_paciente(primer_nombre, primer_apellido, documento_id)',
+                $filter,
+                'fecha_ingreso.desc'
+            );
+        } catch (\Exception $e) {
+            throw new \Exception("Error al buscar historias: " . $e->getMessage());
+        }
+    }
+
+    /**
      * Obtener historias recientes
      */
     public function obtenerRecientes($limite = 10)

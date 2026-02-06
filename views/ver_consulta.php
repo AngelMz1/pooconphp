@@ -10,7 +10,7 @@ use Dotenv\Dotenv;
 $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
 
-requireLogin();
+requirePermission('ver_historia'); // Verificar permiso para ver consultas
 
 $id = $_GET['id'] ?? null;
 if (!$id) {

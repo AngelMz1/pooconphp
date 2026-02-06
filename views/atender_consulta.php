@@ -13,6 +13,7 @@ use App\Procedimiento;
 use App\SignosVitales;
 use App\ReferenceData;
 use App\Medico;
+use App\Facturacion;
 use Dotenv\Dotenv;
 
 $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
@@ -207,61 +208,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $supabase->update('citas', ['estado' => 'atendida'], "id=eq.$cita_id");
         }
         
-        // 6. Mostrar mensaje de éxito y opciones
-        ?>
-        <!DOCTYPE html>
-        <html lang="es">
-        <head>
-            <meta charset="UTF-8">
-            <title>Consulta Finalizada</title>
-            <link rel="stylesheet" href="../assets/css/styles.css">
-        </head>
-        <body class="dashboard-container">
-            <?php include '../includes/sidebar.php'; ?>
-            <?php include '../includes/header.php'; ?>
-            
-            <main class="main-content">
-                <div class="container text-center">
-                    <div class="card fade-in" style="max-width: 800px; margin: 2rem auto;">
-                        <h1 style="color: var(--success);">✅ Consulta Finalizada con Éxito</h1>
-                        <p class="big-text">La historia clínica del paciente ha sido guardada.</p>
-                        
-                        <div class="grid grid-2 mt-4 mb-4">
-                            <div>
-                                <strong>Paciente:</strong><br>
-                                <?= htmlspecialchars($paciente['primer_nombre'] . ' ' . $paciente['primer_apellido']) ?>
-                            </div>
-                            <div>
-                                <strong>ID Consulta:</strong><br>
-                                #<?= $id_consulta ?>
-                            </div>
-                        </div>
+        // 7. GENERAR FACTURA AUTOMÁTICAMENTE
+        $facturacionModel = new Facturacion($supabase);
+        $facturaId = $facturacionModel->generarDesdeConsulta($id_consulta, [
+            'incluir_medicamentos' => false // Los medicamentos no se cobran en la consulta
+        ]);
 
-                        <h3>📂 Documentos Generados</h3>
-                        <div class="flex gap-2 justify-center flex-wrap mt-2">
-                             <a href="imprimir_historia.php?id=<?= $id_historia ?>" class="btn btn-success btn-lg" target="_blank">
-                                🖨️ Imprimir Historia
-                             </a>
-                             <a href="imprimir_formula.php?id_historia=<?= $id_historia ?>" class="btn btn-primary btn-lg" target="_blank">
-                                💊 Imprimir Fórmula
-                             </a>
-                             <a href="imprimir_solicitud.php?id_historia=<?= $id_historia ?>" class="btn btn-outline btn-lg" target="_blank">
-                                🔬 Imprimir Órdenes
-                             </a>
-                        </div>
-                        
-                        <div style="margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #eee;">
-                            <h3>🗓️ Siguientes Pasos</h3>
-                            <a href="calendario_citas.php" class="btn btn-secondary btn-lg">
-                                ⬅️ Volver al Calendario
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </main>
-        </body>
-        </html>
-        <?php
+        if (!$facturaId) {
+            // Si falla la facturación, registrar error pero continuar
+            error_log("Error generando factura para consulta $id_consulta");
+        }
+
+        // 8. Redirigir a resumen de facturación
+        header("Location: resumen_facturacion.php?factura_id=$facturaId&historia_id=$id_historia");
         exit;
         
         // header("Location: ver_historia.php?id=$id_historia&msg=Consulta Finalizada");

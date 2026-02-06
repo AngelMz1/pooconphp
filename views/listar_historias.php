@@ -1,21 +1,35 @@
 <?php
+require_once __DIR__ . '/../includes/auth_helper.php';
+
+// Verificar permiso para ver historias clínicas
+requirePermission('ver_historia');
 require_once '../vendor/autoload.php';
 
-use App\SupabaseClient;
+use App\DatabaseFactory;
 use App\HistoriaClinica;
+use App\Paciente;
 use Dotenv\Dotenv;
 
 $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->load();
+try {
+    $dotenv->safeLoad();
+} catch (Exception $e) { }
 
-$supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
+$supabase = DatabaseFactory::create();
 $historiaModel = new HistoriaClinica($supabase);
+$pacienteModel = new Paciente($supabase);
 
 $error = '';
 $historias = [];
 
+$busqueda = isset($_GET['buscar']) ? trim($_GET['buscar']) : '';
+$historias = [];
+
 try {
-    $historias = $historiaModel->obtenerRecientes(100);
+    if (!empty($busqueda)) {
+        $historias = $historiaModel->buscarGeneral($busqueda);
+    }
+    // Si no hay búsqueda, $historias permanece vacío (seguridad)
 } catch (Exception $e) {
     $error = $e->getMessage();
 }
@@ -67,11 +81,16 @@ try {
                 <div class="filter-row">
                     <div class="filter-group">
                         <label for="search-input">Buscar en diagnóstico o motivo</label>
-                        <input 
-                            type="text" 
-                            id="search-input"
-                            placeholder="🔍 Escribir para buscar..."
-                        >
+                        <div style="display: flex; gap: 10px;">
+                            <input 
+                                type="text" 
+                                id="search-input"
+                                placeholder="🔍 Cédula, nombre, diagnóstico..."
+                                value="<?= htmlspecialchars($busqueda) ?>"
+                                style="flex: 1;"
+                            >
+                            <button id="btn-buscar" class="btn btn-primary">Buscar</button>
+                        </div>
                     </div>
 
                     <div class="filter-group">
@@ -297,11 +316,26 @@ try {
             });
 
             // Event listener para búsqueda en tiempo real
+            // Event listener para búsqueda con botón
+            document.getElementById('btn-buscar').addEventListener('click', function() {
+                realizarBusqueda(document.getElementById('search-input').value);
+            });
+
+            // Event listener para búsqueda en tiempo real (Enter)
+            document.getElementById('search-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    realizarBusqueda(this.value);
+                }
+            });
+            
+            // Debounce opcional mantenido
             document.getElementById('search-input').addEventListener('input', function() {
-                const searchText = this.value;
-                pagination.applyFilter(item => 
-                    FilterUtils.byText(item, searchText, ['motivo_consulta', 'diagnostico', 'tratamiento'])
-                );
+                // Opcional: Búsqueda automática con debounce
+                clearTimeout(searchTimeout);
+                const val = this.value;
+                if(val.length > 2 || val.length === 0) {
+                    searchTimeout = setTimeout(() => realizarBusqueda(val), 800);
+                }
             });
         });
 
@@ -318,8 +352,25 @@ try {
             }
         }
 
+        function realizarBusqueda(termino) {
+            const url = new URL(window.location.href);
+            if (termino && termino.trim().length > 0) {
+                url.searchParams.set('buscar', termino.trim());
+            } else {
+                url.searchParams.delete('buscar');
+            }
+            window.location.href = url.toString();
+        }
+
+        // Reemplazar aplicarFiltros local con redirección si se desea soportar filtros server-side completos,
+        // pero por ahora mantenemos el filtro local solo sobre los resultados devueltos si fuera necesario.
+        // Dado el requerimiento de seguridad, el filtro 'estado' también debería ser server-side,
+        // pero para cumplir "no listar automáticamente", el bloqueo inicial ya está hecho.
+        
         function aplicarFiltros() {
-            const searchText = document.getElementById('search-input').value;
+            // El filtro actual solo funcionará sobre los resultados YA buscados.
+            // Esto es aceptable. Si el usuario busca "Gripe", obtendrá 5 resultados.
+            // Luego puede filtrar esos 5 por fecha/estado localmente.
             const status = document.getElementById('filter-status').value;
             const fechaDesde = document.getElementById('fecha-desde').value;
             const fechaHasta = document.getElementById('fecha-hasta').value;
@@ -327,12 +378,7 @@ try {
             pagination.applyFilter(item => {
                 let matches = true;
 
-                // Filtro de búsqueda
-                if (searchText) {
-                    matches = matches && FilterUtils.byText(item, searchText, 
-                        ['motivo_consulta', 'diagnostico', 'tratamiento', 'observaciones']
-                    );
-                }
+                // (Nota: El filtro de texto ya se hizo en servidor)
 
                 // Filtro de estado
                 if (status) {
@@ -353,12 +399,10 @@ try {
         }
 
         function limpiarFiltros() {
-            document.getElementById('search-input').value = '';
-            document.getElementById('filter-status').value = '';
-            document.getElementById('fecha-desde').value = '';
-            document.getElementById('fecha-hasta').value = '';
-            pagination.resetFilter();
+            // Redirigir a limpio
+            window.location.href = window.location.pathname;
         }
+
 
         function exportarHistorias() {
             const currentData = pagination.filteredItems.map(h => ({

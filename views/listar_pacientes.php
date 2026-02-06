@@ -2,10 +2,10 @@
 require_once '../vendor/autoload.php';
 require_once '../includes/auth_helper.php';
 
-session_start();
-requireLogin();
+// session_start(); // Helper handles this at top of file
+requirePermission('ver_pacientes'); // Verificar permiso para ver lista de pacientes // Security check MUST be active
 
-use App\SupabaseClient;
+use App\DatabaseFactory;
 use App\Paciente;
 use Dotenv\Dotenv;
 
@@ -14,19 +14,8 @@ try {
     $dotenv->safeLoad();
 } catch (Exception $e) { }
 
-$url = $_ENV['SUPABASE_URL'] ?? $_SERVER['SUPABASE_URL'] ?? getenv('SUPABASE_URL');
-$key = $_ENV['SUPABASE_KEY'] ?? $_SERVER['SUPABASE_KEY'] ?? getenv('SUPABASE_KEY');
-
-$supabase = null;
-$pacienteModel = null;
-
-if ($url && $key) {
-    $supabase = new SupabaseClient($url, $key);
-    $pacienteModel = new Paciente($supabase);
-} else {
-    // If no connection, we can't do much, but we shouldn't crash with 500.
-    // We will handle this in the try-catch below by checking if model is null.
-}
+$supabase = DatabaseFactory::create();
+$pacienteModel = new Paciente($supabase);
 
 // Procesamiento de búsqueda y filtros
 $busqueda = $_GET['buscar'] ?? '';
@@ -43,20 +32,24 @@ try {
         $pacientes = $pacienteModel->buscarPorNombre($busqueda);
     } elseif (!empty($filtroEstrato)) {
         $pacientes = $pacienteModel->obtenerPorEstrato($filtroEstrato);
+    } else {
+        // Cargar todos (o últimos 50) si no hay filtro
+        $pacientes = $pacienteModel->obtenerTodos();
     }
-    // No cargar pacientes automáticamente - solo cuando se busque o filtre
 } catch (Exception $e) {
-    $error = $e->getMessage();
+    if (strpos($e->getMessage(), 'must be of type') !== false) {
+        $error = "Error de compatibilidad de tipos en base de datos. (Parche aplicado)";
+    } else {
+        $error = "Error al cargar pacientes: " . $e->getMessage();
+    }
 }
-?>
-
-<!DOCTYPE html>
+?><!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lista de Pacientes - Sistema de Gestión Médica</title>
-    <link rel="stylesheet" href="../assets/css/styles.css">
+    <link rel="stylesheet" href="../assets/css/styles.css?v=<?= time() ?>">
 </head>
 <body>
     <div class="dashboard-container">

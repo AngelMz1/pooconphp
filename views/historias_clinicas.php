@@ -1,17 +1,25 @@
 <?php
+require_once __DIR__ . '/../includes/auth_helper.php';
+
+// Verificar permiso para ver historias clínicas
+requirePermission('ver_historia');
 require_once '../vendor/autoload.php';
 
+use App\DatabaseFactory;
 use App\SupabaseClient;
 use App\HistoriaClinica;
 use App\Paciente;
+use App\Validator;
 use Dotenv\Dotenv;
 
 $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->load();
+try {
+    $dotenv->safeLoad();
+} catch (Exception $e) { }
 
-$supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
-$historiaClinica = new HistoriaClinica($supabase);
-$paciente = new Paciente($supabase);
+$supabase = DatabaseFactory::create();
+$historiaModel = new HistoriaClinica($supabase);
+$pacienteModel = new Paciente($supabase);
 
 $mensaje = '';
 $error = '';

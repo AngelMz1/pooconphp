@@ -3,6 +3,7 @@ session_start();
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../includes/auth_helper.php';
 
+use App\DatabaseFactory;
 use App\SupabaseClient;
 use Dotenv\Dotenv;
 
@@ -22,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
         $dotenv->load();
 
-        $supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
+        $supabase = DatabaseFactory::create();
 
         // Buscar usuario
         // Nota: SupabaseClient::select devuelve un array de resultados
@@ -38,22 +39,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['user_name'] = $user['nombre_completo'];
                 $_SESSION['user_role'] = $user['rol'];
                 
-                // --- Cargar Permisos ---
+                
+                // --- Cargar Permisos del Usuario (desde user_permissions) ---
                 try {
-                     $perms = $supabase->select('user_permissions', 'permissions(name)', "user_id=eq.{$user['id']}");
-                     $permList = [];
-                     if (!empty($perms)) {
-                         foreach ($perms as $p) {
-                             if (isset($p['permissions']['name'])) {
-                                 $permList[] = $p['permissions']['name'];
-                             }
-                         }
-                     }
-                     $_SESSION['permissions'] = $permList;
+                    $userId = $user['id'];
+                    // Consultar permisos directamente desde user_permissions
+                    $perms = $supabase->query("
+                        SELECT p.codigo
+                        FROM user_permissions up
+                        JOIN permisos p ON up.permission_id = p.id
+                        WHERE up.user_id = $userId
+                    ");
+                    
+                    $permList = [];
+                    if (!empty($perms)) {
+                        foreach ($perms as $p) {
+                            $permList[] = $p['codigo'];
+                        }
+                    }
+                    $_SESSION['permissions'] = $permList;
                 } catch (Exception $e) {
-                     // Si falla, iniciar vacío
-                     $_SESSION['permissions'] = [];
+                    // Si falla cargar permisos, iniciar vacío
+                    error_log("Error loading user permissions: " . $e->getMessage());
+                    $_SESSION['permissions'] = [];
                 }
+
 
                 header("Location: ../index.php");
                 exit;

@@ -1,4 +1,10 @@
 <?php
+require_once __DIR__ . '/../includes/auth_helper.php';
+
+// Verificar permiso para ver consultas/historias
+if (!hasPermission('atender_consulta') && !hasPermission('ver_historia')) {
+    die('<h1>Acceso Denegado</h1><p>No tiene permisos para ver consultas.</p>');
+}
 require_once '../vendor/autoload.php';
 
 use App\SupabaseClient;

@@ -1,6 +1,6 @@
 -- Add user_id to medicos table to link with users system
 ALTER TABLE medicos 
-ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id); 
+ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES users(id); 
 -- Note: unique constraint might be good if 1-to-1, but let's keep it simple for now.
 -- Actually, since 'users' table in this app seems to be a custom table (based on login.php reading 'users' table), 
 -- checking login.php line 29: $supabase->select('users', ...).

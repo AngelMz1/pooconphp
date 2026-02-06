@@ -1,15 +1,23 @@
 <?php
+require_once __DIR__ . '/../includes/auth_helper.php';
+
+// Verificar permiso para gestionar pacientes
+requirePermission('gestionar_pacientes');
 require_once '../vendor/autoload.php';
 
+use App\DatabaseFactory;
 use App\SupabaseClient;
 use App\Paciente;
 use App\ReferenceData;
+use App\Validator;
 use Dotenv\Dotenv;
 
 $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->load();
+try {
+    $dotenv->safeLoad();
+} catch (Exception $e) { }
 
-$supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
+$supabase = DatabaseFactory::create();
 $pacienteModel = new Paciente($supabase);
 $refData = new ReferenceData($supabase);
 
@@ -50,7 +58,7 @@ if ($_POST) {
         // Preparar TODOS los datos del paciente
         $datos = [
             // Identificación
-            'tipo_documento_id' => $_POST['tipo_documento_id'] ?? 1,
+            'tipo_documento_id' => $_POST['tipo_documento_id'] ?? null,
             'documento_id' => $_POST['documento_id'],
             
             // Nombres completos (todos requeridos según schema)
@@ -61,22 +69,23 @@ if ($_POST) {
             
             // Datos básicos
             'fecha_nacimiento' => $_POST['fecha_nacimiento'] ?? null,
-            'sexo_id' => $_POST['sexo_id'] ?? null,
+            'sexo_id' => !empty($_POST['sexo_id']) ? (int)$_POST['sexo_id'] : null,
             
             // Ubicación
             'direccion' => $_POST['direccion'] ?? null,
             'telefono' => $_POST['telefono'] ?? null,
-            'ciudad_id' => (int)$_POST['ciudad_id'],
-            'lugar_nacimiento' => (int)$_POST['lugar_nacimiento'],
+            'email' => $_POST['email'] ?? null,
+            'ciudad_id' => !empty($_POST['ciudad_id']) ? (int)$_POST['ciudad_id'] : null,
+            'lugar_nacimiento' => !empty($_POST['lugar_nacimiento']) ? (int)$_POST['lugar_nacimiento'] : null,
             'barrio_id' => !empty($_POST['barrio_id']) ? (int)$_POST['barrio_id'] : null,
             
             // Salud y aseguramiento
-            'eps_id' => (int)$_POST['eps_id'],
+            'eps_id' => !empty($_POST['eps_id']) ? (int)$_POST['eps_id'] : null,
             'regimen_id' => !empty($_POST['regimen_id']) ? (int)$_POST['regimen_id'] : null,
-            'gs_rh_id' => (int)$_POST['gs_rh_id'],
+            'gs_rh_id' => !empty($_POST['gs_rh_id']) ? (int)$_POST['gs_rh_id'] : null,
             
             // Datos sociodemográficos
-            'estrato' => (int)$_POST['estrato'],
+            'estrato' => !empty($_POST['estrato']) ? (int)$_POST['estrato'] : null,
             'estado_civil_id' => !empty($_POST['estado_civil_id']) ? (int)$_POST['estado_civil_id'] : null,
             'ocupacion' => $_POST['ocupacion'] ?? null,
             'escolaridad_id' => !empty($_POST['escolaridad_id']) ? (int)$_POST['escolaridad_id'] : null,
@@ -250,6 +259,7 @@ if (isset($_GET['success']) && !$error) {
                             </select>
                         </div>
 
+
                         <div class="form-group">
                             <label for="documento_id">Número de Documento <span class="required-indicator">*</span></label>
                             <input type="text" name="documento_id" id="documento_id" required
@@ -329,9 +339,9 @@ if (isset($_GET['success']) && !$error) {
 
                         <div class="form-group">
                             <label for="ocupacion">Ocupación</label>
-                            <input type="text" name="ocupacion" id="ocupacion" maxlength="1"
+                            <input type="text" name="ocupacion" id="ocupacion" maxlength="100"
                                    value="<?= $isEdit ? htmlspecialchars($paciente['ocupacion'] ?? '') : '' ?>">
-                            <small class="help-text">Un carácter</small>
+                            <small class="help-text">Profesión u ocupación del paciente</small>
                         </div>
                     </div>
 
@@ -584,10 +594,6 @@ if (isset($_GET['success']) && !$error) {
                     </div>
                 </div>
 
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Botones de Navegación -->
                 <div class="card-footer" style="margin-top: 2rem; padding-top: 2rem; border-top: 2px solid var(--gray-200);">
                     <div style="display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
@@ -608,8 +614,6 @@ if (isset($_GET['success']) && !$error) {
                         <?php endif; ?>
                     </div>
                 </div>
-
-                </div>
             </form>
         </div>
     </div>
@@ -618,6 +622,7 @@ if (isset($_GET['success']) && !$error) {
     <script>
         let currentTab = 0;
         const totalTabs = 8;
+        const isEdit = <?= $isEdit ? 'true' : 'false' ?>;
 
         function showTab(n) {
             const tabs = document.querySelectorAll('.tab-content');
@@ -644,7 +649,13 @@ if (isset($_GET['success']) && !$error) {
         function updateButtons() {
             document.getElementById('prevBtn').style.display = currentTab === 0 ? 'none' : 'inline-flex';
             document.getElementById('nextBtn').style.display = currentTab === totalTabs - 1 ? 'none' : 'inline-flex';
-            document.getElementById('submitBtn').style.display = currentTab === totalTabs - 1 ? 'inline-flex' : 'none';
+            
+            // Mostrar botón de guardar si es el último tab O si estamos en modo edición
+            if (currentTab === totalTabs - 1 || isEdit) {
+                document.getElementById('submitBtn').style.display = 'inline-flex';
+            } else {
+                document.getElementById('submitBtn').style.display = 'none';
+            }
         }
 
 

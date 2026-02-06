@@ -9,12 +9,16 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+use App\DatabaseFactory;
 use App\SupabaseClient;
 use Dotenv\Dotenv;
 
 $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->load();
-$supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
+try {
+    $dotenv->safeLoad();
+} catch (Exception $e) { }
+
+$supabase = DatabaseFactory::create();
 
 if (!isset($_GET['medico_id']) || !isset($_GET['fecha'])) {
     http_response_code(400);

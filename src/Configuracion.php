@@ -4,26 +4,15 @@ namespace App;
 
 use App\SupabaseClient;
 use App\BaseModel;
+use App\DatabaseFactory;
 
 class Configuracion extends BaseModel {
     private $table = 'configuracion';
 
     public function __construct($supabase = null) {
         if (!$supabase) {
-            // Inicializar cliente si no se pasa (caso header.php)
-            if (!isset($_ENV['SUPABASE_URL'])) {
-                $dotenv = \Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
-                try {
-                    $dotenv->safeLoad();
-                } catch (\Exception $e) { }
-            }
-            
-            $url = $_ENV['SUPABASE_URL'] ?? $_SERVER['SUPABASE_URL'] ?? getenv('SUPABASE_URL');
-            $key = $_ENV['SUPABASE_KEY'] ?? $_SERVER['SUPABASE_KEY'] ?? getenv('SUPABASE_KEY');
-            
-            if ($url && $key) {
-                $supabase = new SupabaseClient($url, $key);
-            }
+            // Inicializar cliente con factory
+            $supabase = DatabaseFactory::create();
         }
         parent::__construct($supabase);
     }

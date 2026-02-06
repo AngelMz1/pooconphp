@@ -1,4 +1,8 @@
 <?php
+require_once __DIR__ . '/../includes/auth_helper.php';
+
+// Verificar permiso para ver historia clínica
+requirePermission('ver_historia');
 require_once '../vendor/autoload.php';
 
 use App\SupabaseClient;

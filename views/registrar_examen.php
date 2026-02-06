@@ -1,4 +1,8 @@
 <?php
+require_once __DIR__ . '/../includes/auth_helper.php';
+
+// Verificar permiso para atender consultas
+requirePermission('atender_consulta');
 require_once '../vendor/autoload.php';
 
 use App\SupabaseClient;

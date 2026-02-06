@@ -1,0 +1,271 @@
+<?php
+require_once '../vendor/autoload.php';
+require_once '../includes/auth_helper.php';
+
+requirePermission('ver_facturas'); // Verificar permiso para ver facturas
+
+use App\DatabaseFactory;
+use App\Facturacion;
+use Dotenv\Dotenv;
+
+$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
+try {
+    $dotenv->safeLoad();
+} catch (Exception $e) { }
+
+$db = DatabaseFactory::create();
+$facturacionModel = new Facturacion($db);
+
+// Procesar filtros
+$filtros = [];
+if (!empty($_GET['estado'])) {
+    $filtros['estado'] = $_GET['estado'];
+}
+if (!empty($_GET['fecha_desde'])) {
+    $filtros['fecha_desde'] = $_GET['fecha_desde'];
+}
+if (!empty($_GET['fecha_hasta'])) {
+    $filtros['fecha_hasta'] = $_GET['fecha_hasta'];
+}
+
+// Obtener facturas
+$facturas = $facturacionModel->listarFacturas($filtros);
+
+// Obtener totales
+$totalFacturado = 0;
+$totalCobrado = 0;
+$totalPendiente = 0;
+
+foreach ($facturas as $factura) {
+    $totalFacturado += $factura['total'];
+    if ($factura['estado'] === 'pagada') {
+        $totalCobrado += $factura['total'];
+    } elseif ($factura['estado'] === 'pendiente') {
+        $totalPendiente += $factura['total'];
+    }
+}
+
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Facturas - Sistema Médico</title>
+    <link rel="stylesheet" href="../assets/css/styles.css">
+    <style>
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-card h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+        
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        
+        .stat-facturado {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .stat-cobrado {
+            background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+            color: white;
+        }
+        
+        .stat-pendiente {
+            background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+            color: white;
+        }
+        
+        .filters-container {
+            background: var(--gray-50);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .table-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .badge-pendiente {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .badge-pagada {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .badge-anulada {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+    </style>
+</head>
+<body class="dashboard-container">
+    <?php include '../includes/sidebar.php'; ?>
+    <?php include '../includes/header.php'; ?>
+    
+    <main class="main-content">
+        <div class="container">
+            <div class="page-header">
+                <h1>📋 Gestión de Facturas</h1>
+                <div class="page-actions">
+                    <a href="calendario_citas.php" class="btn btn-outline">
+                        🗓️ Volver al Calendario
+                    </a>
+                </div>
+            </div>
+
+            <!-- Estadísticas -->
+            <div class="stats-grid">
+                <div class="stat-card stat-facturado">
+                    <h3>Total Facturado</h3>
+                    <div class="value">$<?= number_format($totalFacturado, 0, ',', '.') ?></div>
+                    <small><?= count($facturas) ?> facturas</small>
+                </div>
+                <div class="stat-card stat-cobrado">
+                    <h3>Total Cobrado</h3>
+                    <div class="value">$<?= number_format($totalCobrado, 0, ',', '.') ?></div>
+                </div>
+                <div class="stat-card stat-pendiente">
+                    <h3>Total Pendiente</h3>
+                    <div class="value">$<?= number_format($totalPendiente, 0, ',', '.') ?></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <!-- Filtros -->
+                <form method="GET" class="filters-container">
+                    <div class="grid grid-4">
+                        <div class="form-group mb-0">
+                            <label>Estado</label>
+                            <select name="estado">
+                                <option value="">Todas</option>
+                                <option value="pendiente" <?= ($_GET['estado'] ?? '') === 'pendiente' ? 'selected' : '' ?>>Pendientes</option>
+                                <option value="pagada" <?= ($_GET['estado'] ?? '') === 'pagada' ? 'selected' : '' ?>>Pagadas</option>
+                                <option value="anulada" <?= ($_GET['estado'] ?? '') === 'anulada' ? 'selected' : '' ?>>Anuladas</option>
+                            </select>
+                        </div>
+                        <div class="form-group mb-0">
+                            <label>Desde</label>
+                            <input type="date" name="fecha_desde" value="<?= $_GET['fecha_desde'] ?? '' ?>">
+                        </div>
+                        <div class="form-group mb-0">
+                            <label>Hasta</label>
+                            <input type="date" name="fecha_hasta" value="<?= $_GET['fecha_hasta'] ?? '' ?>">
+                        </div>
+                        <div class="form-group mb-0" style="display: flex; align-items: flex-end;">
+                            <button type="submit" class="btn btn-primary" style="width: 100%;">Filtrar</button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Tabla de facturas -->
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>No.</th>
+                                <th>Fecha</th>
+                                <th>Paciente</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                                <th>Método Pago</th>
+                                <th style="text-align: center;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($facturas)): ?>
+                                <tr>
+                                    <td colspan="7" style="text-align: center; padding: 3rem; color: var(--gray-400);">
+                                        No se encontraron facturas
+                                    </td>
+                                </tr>
+                            <?php else: ?>
+                                <?php foreach ($facturas as $factura): ?>
+                                    <?php
+                                    // Obtener nombre del paciente
+                                    $pacienteData = $db->select('pacientes', 'primer_nombre,primer_apellido', "id_paciente=eq.{$factura['paciente_id']}");
+                                    $paciente = $pacienteData[0] ?? null;
+                                    $nombrePaciente = $paciente ? $paciente['primer_nombre'] . ' ' . $paciente['primer_apellido'] : 'N/A';
+                                    ?>
+                                    <tr>
+                                        <td><strong>#<?= str_pad($factura['id'], 6, '0', STR_PAD_LEFT) ?></strong></td>
+                                        <td><?= date('d/m/Y', strtotime($factura['fecha'])) ?></td>
+                                        <td><?= htmlspecialchars($nombrePaciente) ?></td>
+                                        <td><strong>$<?= number_format($factura['total'], 0, ',', '.') ?></strong></td>
+                                        <td>
+                                            <span class="badge badge-<?= $factura['estado'] ?>">
+                                                <?php
+                                                $iconos = [
+                                                    'pendiente' => '🟡',
+                                                    'pagada' => '🟢',
+                                                    'anulada' => '🔴'
+                                                ];
+                                                echo $iconos[$factura['estado']] ?? '';
+                                                echo ' ' . ucfirst($factura['estado']);
+                                                ?>
+                                            </span>
+                                        </td>
+                                        <td><?= htmlspecialchars($factura['metodo_pago'] ?? '-') ?></td>
+                                        <td>
+                                            <div class="table-actions" style="justify-content: center;">
+                                                <a href="resumen_facturacion.php?factura_id=<?= $factura['id'] ?>" 
+                                                   class="btn btn-sm btn-outline" 
+                                                   title="Ver Detalle">
+                                                    👁️
+                                                </a>
+                                                <?php if ($factura['estado'] === 'pendiente'): ?>
+                                                    <a href="registrar_pago.php?factura_id=<?= $factura['id'] ?>" 
+                                                       class="btn btn-sm btn-success" 
+                                                       title="Registrar Pago">
+                                                        💳
+                                                    </a>
+                                                <?php endif; ?>
+                                                <a href="imprimir_factura.php?id=<?= $factura['id'] ?>" 
+                                                   class="btn btn-sm btn-primary" 
+                                                   target="_blank"
+                                                   title="Imprimir">
+                                                    🖨️
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

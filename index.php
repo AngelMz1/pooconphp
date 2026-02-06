@@ -5,7 +5,7 @@ require_once 'includes/auth_helper.php';
 // Proteger Dashboard
 requireLogin();
 
-use App\SupabaseClient;
+use App\DatabaseFactory;
 use App\Paciente;
 use App\HistoriaClinica; 
 use App\Consulta;
@@ -20,9 +20,15 @@ try {
     $dotenv = Dotenv::createImmutable(__DIR__);
     $dotenv->load();
     
-    // Verificar configuración
-    if (isset($_ENV['SUPABASE_URL']) && isset($_ENV['SUPABASE_KEY'])) {
-        $supabase = new SupabaseClient($_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']);
+    // Verificar configuración y Crear DB
+    $db = DatabaseFactory::create();
+    // Backward compatibility shim for raw queries in this file
+    $supabase = $db; // Variable name reused to minimize diff, but now it's an adapter
+    
+    // Test connection?
+    // $paciente = new Paciente($db); // No need to pass $db if using factory inside, but passing it is cleaner.
+    
+    if ($db) {
         
         // Obtener estadísticas si las clases existen
         if (class_exists('App\\Paciente')) {
@@ -47,7 +53,7 @@ $esAdmin = $rol === 'admin';
 
 if (($esMedico || $esAdmin) && isset($_SESSION['user_id'])) {
     try {
-        $consultaModel = new Consulta($supabase);
+        $consultaModel = new Consulta(); // Factory used internally
         
         if ($esAdmin) {
             // Admin ve TODAS las pendientes
@@ -215,8 +221,7 @@ if (($esMedico || $esAdmin) && isset($_SESSION['user_id']) && isset($supabase)) 
                                 <div class="alert alert-success">
                                     ✅ Conexión Configurada
                                 </div>
-                                <p style="color: var(--gray-600); font-size: 0.8rem; margin-top: 0.5rem;">
-                                    <strong>URL:</strong> <?= htmlspecialchars($_ENV['SUPABASE_URL']) ?>
+                                    <strong>Mode:</strong> <?= isset($_ENV['DB_CONNECTION']) ? $_ENV['DB_CONNECTION'] : 'Cloud (Default)' ?>
                                 </p>
                             <?php else: ?>
                                 <div class="alert alert-error">
