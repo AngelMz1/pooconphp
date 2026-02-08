@@ -191,7 +191,7 @@ class HistoriaClinica extends BaseModel
             
             return $this->supabase->select(
                 'historias_clinicas',
-                '*, pacientes:id_paciente(primer_nombre, primer_apellido, documento_id)',
+                '*',
                 $filter,
                 'fecha_ingreso.desc'
             );
@@ -208,7 +208,7 @@ class HistoriaClinica extends BaseModel
         try {
             return $this->supabase->select(
                 'historias_clinicas',
-                '*, pacientes:id_paciente(primer_nombre, primer_apellido, documento_id)',
+                '*',
                 "limit=$limite",
                 'fecha_ingreso.desc'
             );

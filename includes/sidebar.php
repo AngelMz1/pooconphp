@@ -61,7 +61,7 @@ if (!function_exists('isActive')) {
             </a>
         <?php endif; ?>
         
-        <?php if (hasRole('cajero') || hasRole('admin')): ?>
+        <?php if (hasRole('facturador') || hasRole('admin')): ?>
             <a href="<?= $viewsPath ?>gestion_citas.php" class="menu-item <?= isActive('gestion_citas.php') ?>">
                 <span class="menu-icon"><?= getIcon('edit') ?></span> Gestionar Citas
             </a>
@@ -85,11 +85,16 @@ if (!function_exists('isActive')) {
             <a href="<?= $viewsPath ?>listar_consultas.php" class="menu-item <?= isActive('listar_consultas.php') ?>">
                 <span class="menu-icon"><?= getIcon('file-text') ?></span> Historial Consultas
             </a>
-            
+        <?php endif; ?>
+
+        <!-- HISTORIAS CLÍNICAS (Medico, Facturador y Admin) -->
+        <?php if (hasRole('medico') || hasRole('facturador') || hasRole('admin')): ?>
             <div class="menu-category">Historias Clínicas</div>
-            <a href="<?= $viewsPath ?>historias_clinicas.php" class="menu-item <?= isActive('historias_clinicas.php') ?>">
-                <span class="menu-icon"><?= getIcon('file-text') ?></span> Nueva Historia
-            </a>
+            <?php if (hasRole('medico') || hasRole('admin')): ?>
+                <a href="<?= $viewsPath ?>historias_clinicas.php" class="menu-item <?= isActive('historias_clinicas.php') ?>">
+                    <span class="menu-icon"><?= getIcon('file-text') ?></span> Nueva Historia
+                </a>
+            <?php endif; ?>
             <a href="<?= $viewsPath ?>listar_historias.php" class="menu-item <?= isActive('listar_historias.php') ?>">
                 <span class="menu-icon"><?= getIcon('file-text') ?></span> Ver Historias
             </a>

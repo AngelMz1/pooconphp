@@ -24,14 +24,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $color_s = $_POST['color_secundario'] ?? '#6c757d';
     $logo = $_POST['logo_url'] ?? '';
 
-    if ($configuracion->actualizarConfiguracion($nombre, $color_p, $color_s, $logo)) {
+    if ($configModel->actualizarConfiguracion($nombre, $color_p, $color_s, $logo)) {
         $mensaje = "<div class='alert alert-success'>Configuración actualizada correctamente.</div>";
     } else {
         $mensaje = "<div class='alert alert-danger'>Error al actualizar la configuración.</div>";
     }
 }
 
-$datos = $configuracion->obtenerConfiguracion();
+$datos = $configModel->obtenerConfiguracion();
 ?><!DOCTYPE html>
 <html lang="es">
 <head>

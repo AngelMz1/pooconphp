@@ -65,7 +65,7 @@ if ($_POST) {
             $datos['fecha_egreso'] = $_POST['fecha_egreso'];
         }
 
-        $resultado = $historiaClinica->crear($datos);
+        $resultado = $historiaModel->crear($datos);
         $mensaje = "Historia clínica creada exitosamente. ID: " . $resultado[0]['id_historia'];
         
     } catch (Exception $e) {
@@ -75,7 +75,7 @@ if ($_POST) {
 
 // Obtener pacientes para el select
 try {
-    $pacientes = $paciente->obtenerTodos();
+    $pacientes = $pacienteModel->obtenerTodos();
 } catch (Exception $e) {
     $error = "Error al cargar pacientes: " . $e->getMessage();
     $pacientes = [];

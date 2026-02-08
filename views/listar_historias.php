@@ -29,7 +29,7 @@ try {
     if (!empty($busqueda)) {
         $historias = $historiaModel->buscarGeneral($busqueda);
     }
-    // Si no hay búsqueda, $historias permanece vacío (seguridad)
+    // Si no hay búsqueda, $historias permanece vacío (SEGURIDAD: no listar datos sensibles)
 } catch (Exception $e) {
     $error = $e->getMessage();
 }

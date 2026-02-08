@@ -48,6 +48,32 @@ if ($cita_id && !$id_consulta) {
         if (!empty($citas)) {
             $cita = $citas[0];
             
+            // VALIDAR FECHA FUTURA
+            $fecha_cita = new DateTime($cita['fecha_hora']);
+            $hoy = new DateTime('now');
+            $hoy->setTime(0, 0, 0); // Reset time to compare only dates
+            
+            if ($fecha_cita > $hoy) {
+                // La cita es para una fecha futura
+                $fecha_formateada = $fecha_cita->format('d/m/Y');
+                echo "<!DOCTYPE html>
+                <html lang='es'>
+                <head>
+                    <meta charset='UTF-8'>
+                    <title>Fecha Futura</title>
+                    <link rel='stylesheet' href='../assets/css/styles.css'>
+                </head>
+                <body>
+                    <script>
+                        alert('⚠️ No se puede atender esta cita\\n\\nLa cita está programada para el $fecha_formateada, que es una fecha futura.\\n\\nSolo se pueden atender citas del día actual o fechas pasadas.');
+                        window.location.href = 'calendario_citas.php';
+                    </script>
+                </body>
+                </html>";
+                exit;
+            }
+            
+            
             // Obtener el ID del perfil del médico
             // Primero intentar desde la cita, si no, usar el médico logueado
             $medicoModel = new Medico($supabase);
@@ -64,7 +90,11 @@ if ($cita_id && !$id_consulta) {
             }
             
             if (!$perfilMedico) {
-                die("Error: No se encontró el perfil del médico. Asegúrese de que su usuario esté vinculado a un perfil de médico.");
+                $errorMsg = "Error: No se encontró el perfil del médico.<br>";
+                $errorMsg .= "Cita medico_id: " . ($cita['medico_id'] ?? 'NULL') . "<br>";
+                $errorMsg .= "Session user_id: " . ($_SESSION['user_id'] ?? 'NULL') . "<br>";
+                $errorMsg .= "Asegúrese de que el usuario esté vinculado a un perfil de médico en la tabla 'medicos'.";
+                die($errorMsg);
             }
             
             $medico_perfil_id = $perfilMedico['id'];
@@ -90,17 +120,20 @@ if ($cita_id && !$id_consulta) {
                     if (!empty($nuevo) && isset($nuevo[0]['id_consulta'])) {
                         $id_consulta = $nuevo[0]['id_consulta'];
                     } else {
-                        throw new Exception("Error al crear consulta automática.");
+                        throw new Exception("Error al crear consulta automática. Respuesta: " . print_r($nuevo, true));
                     }
                 } catch (Exception $e) {
                     die("Error creando consulta: " . $e->getMessage());
                 }
             }
+        } else {
+            die("Error: No se encontró la cita con ID: " . $cita_id);
         }
     } catch (Exception $e) {
         die("Error al procesar la cita: " . $e->getMessage());
     }
 }
+
 
 // Logic continues...
 if (!$id_consulta && !$cita_id) {
@@ -108,21 +141,28 @@ if (!$id_consulta && !$cita_id) {
     exit;
 }
 
-try {
-    // Obtener datos de la consulta
-    $consulta = $consultaModel->obtenerPorId($id_consulta);
-    
-    if (!$consulta) {
-        throw new Exception("Consulta no encontrada");
+// Only try to fetch consulta if we have a valid id_consulta
+if ($id_consulta) {
+    try {
+        // Obtener datos de la consulta
+        $consulta = $consultaModel->obtenerPorId($id_consulta);
+        
+        if (!$consulta) {
+            throw new Exception("Consulta no encontrada");
+        }
+
+        // Obtener info paciente
+        $pacienteData = $supabase->select('pacientes', '*', "id_paciente=eq." . $consulta['id_paciente']);
+        $paciente = $pacienteData[0] ?? null;
+
+    } catch (Exception $e) {
+        $error = $e->getMessage();
     }
-
-    // Obtener info paciente
-    $pacienteData = $supabase->select('pacientes', '*', "id_paciente=eq." . $consulta['id_paciente']);
-    $paciente = $pacienteData[0] ?? null;
-
-} catch (Exception $e) {
-    $error = $e->getMessage();
+} else {
+    // Si llegamos aquí sin id_consulta, algo salió mal con el flujo de cita
+    $error = "No se pudo inicializar la consulta. Por favor, intente nuevamente.";
 }
+
 
 // Procesar Formulario
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

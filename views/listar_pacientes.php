@@ -32,10 +32,8 @@ try {
         $pacientes = $pacienteModel->buscarPorNombre($busqueda);
     } elseif (!empty($filtroEstrato)) {
         $pacientes = $pacienteModel->obtenerPorEstrato($filtroEstrato);
-    } else {
-        // Cargar todos (o últimos 50) si no hay filtro
-        $pacientes = $pacienteModel->obtenerTodos();
     }
+    // Si no hay búsqueda/filtro, $pacientes permanece vacío (SEGURIDAD: no listar datos sensibles)
 } catch (Exception $e) {
     if (strpos($e->getMessage(), 'must be of type') !== false) {
         $error = "Error de compatibilidad de tipos en base de datos. (Parche aplicado)";

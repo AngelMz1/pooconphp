@@ -1251,7 +1251,8 @@ tr:hover {
 
 /* Responsive adjustments */
 /* Responsive adjustments for fixed layout */
-@media (max-width: 768px) {
+/* Hamburger menu activates when viewport width < 60% (960px ≈ 60% of 1600px standard desktop) */
+@media (max-width: 960px) {
     .sidebar {
         transform: translateX(-100%);
         transition: transform 0.3s ease;
