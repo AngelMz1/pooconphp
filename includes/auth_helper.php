@@ -57,15 +57,42 @@ function logout() {
 
 /**
  * Verifica si el usuario tiene un permiso específico.
+ * Mapea permisos a roles ya que no hay tabla de permisos
  */
 function hasPermission($permission) {
-    // Todos los usuarios deben tener permisos explícitos (incluido admin)
-    
-    if (!isset($_SESSION['permissions']) || !is_array($_SESSION['permissions'])) {
+    if (!isset($_SESSION['user_role'])) {
         return false;
     }
     
-    return in_array($permission, $_SESSION['permissions']);
+    $role = $_SESSION['user_role'];
+    
+    // Admin tiene todos los permisos
+    if ($role === 'admin') {
+        return true;
+    }
+    
+    // Mapeo de permisos por rol
+    $permissionMap = [
+        'medico' => [
+            'ver_todas_citas',
+            'atender_consultas',
+            'ver_historias_clinicas',
+            'crear_historias_clinicas'
+        ],
+        'cajero' => [
+            'agendar_citas',
+            'ver_todas_citas',
+            'gestionar_pacientes',
+            'facturar',
+            'confirmar_citas'
+        ]
+    ];
+    
+    if (!isset($permissionMap[$role])) {
+        return false;
+    }
+    
+    return in_array($permission, $permissionMap[$role]);
 }
 
 /**

@@ -61,7 +61,7 @@ if (!function_exists('isActive')) {
             </a>
         <?php endif; ?>
         
-        <?php if (hasRole('facturador') || hasRole('admin')): ?>
+        <?php if (hasRole('facturador') || hasRole('cajero') || hasRole('admin')): ?>
             <a href="<?= $viewsPath ?>gestion_citas.php" class="menu-item <?= isActive('gestion_citas.php') ?>">
                 <span class="menu-icon"><?= getIcon('edit') ?></span> Gestionar Citas
             </a>
